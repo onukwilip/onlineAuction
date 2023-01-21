@@ -77,7 +77,7 @@
 }
 
 .mobile-pre-header {
-  background-color: #fff;
+  background-color: inherit;
   color: black;
   @include grid(1fr, auto, 10px);
   & > div {
@@ -220,6 +220,7 @@
       @include flex(center, center, 0, row);
       position: relative;
       .contact-menu {
+        background-color: white;
         display: block;
         position: absolute;
         top: 60px;
