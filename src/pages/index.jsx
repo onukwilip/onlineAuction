@@ -6,6 +6,7 @@ import PreHeader from "@/components/PreHeader";
 import PageHeader from "@/components/Header";
 import Banner from "@/components/Banner";
 import Finished from "@/components/Finished";
+import Current from "@/components/Current";
 const inter = Inter({ subsets: ["latin"] });
 
 export default function Home() {
@@ -40,7 +41,9 @@ export default function Home() {
         <div className={css["finished"]}>
           <Finished />
         </div>
-        <div className={css["pre-header"]}></div>
+        <div className={css["current"]}>
+          <Current />
+        </div>
         <div className={css["pre-header"]}></div>
         <div className={css["pre-header"]}></div>
         <div className={css["pre-header"]}></div>

@@ -20,6 +20,9 @@
   .finished {
     box-shadow: $section-shadow;
   }
+  .current {
+    max-width: 100vw;
+  }
 }
 
 @media (max-width: 800px) {
