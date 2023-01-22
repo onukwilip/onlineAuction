@@ -100,10 +100,12 @@ const Current = () => {
           <CurrentItem item={finished} key={i} />
         ))}
       </div>
-      <Button icon labelPosition="right" className={css.more}>
-        View more
-        <Icon name="right arrow" />
-      </Button>
+      <div className={css["actions"]}>
+        <Button icon labelPosition="right" className={css.more}>
+          View more
+          <Icon name="right arrow" />
+        </Button>
+      </div>
     </div>
   );
 };
