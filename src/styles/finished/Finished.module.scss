@@ -15,6 +15,7 @@
   .auctions {
     @include flex(center, center, $spacing, row);
     flex-wrap: wrap;
+    padding-top: $spacing + 2rem;
   }
 }
 
@@ -51,6 +52,6 @@
 
 @media (max-width: 350px) {
   .finished {
-    padding: $spacing;
+    padding: $spacing + 2rem $spacing;
   }
 }

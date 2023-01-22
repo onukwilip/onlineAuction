@@ -14,6 +14,7 @@
   .auctions {
     @include flex(center, center, $spacing, row);
     flex-wrap: wrap;
+    padding-top: $spacing + 2rem;
   }
   .actions {
     text-align: center;
@@ -89,6 +90,6 @@
 
 @media (max-width: 350px) {
   .current {
-    padding: $spacing;
+    padding: $spacing + 2rem $spacing;
   }
 }
