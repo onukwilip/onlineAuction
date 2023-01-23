@@ -9,10 +9,8 @@
   .pre-header {
   }
   .header {
-    z-index: 5;
     position: sticky;
     top: 0;
-    box-shadow: $section-shadow;
   }
   .banner {
     min-height: 75vh;

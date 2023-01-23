@@ -6,8 +6,8 @@ import { useTimer } from "react-timer-hook";
 class CurrentAuctionClass {
   constructor(name, price, start, image, expiry) {
     this.name = name;
-    this.price = price;
-    this.bidStart = start;
+    this.currentBid = price;
+    this.startingBid = start;
     this.image = image;
     this.expiry = expiry;
   }
@@ -47,6 +47,7 @@ const CurrentAuctions = [
 const CurrentItem = ({ item }) => {
   const { seconds, minutes, hours, days, start } = useTimer({
     expiryTimestamp: new Date(item?.expiry),
+    onExpire: () => {},
   });
 
   useEffect(() => {
@@ -68,12 +69,12 @@ const CurrentItem = ({ item }) => {
         <Card.Content className={css["card-content"]}>
           <Card.Meta className={css["start-bid"]}>
             <span className="date">
-              Start bid: <em>${item?.bidStart}</em>
+              Start bid: <em>${item?.startingBid}</em>
             </span>
           </Card.Meta>
           <Card.Header className={css["price"]}>
             <em>
-              <sup>$</sup> {item?.price}
+              <sup>$</sup> {item?.currentBid}
             </em>
           </Card.Header>
           <Card.Description>{item?.name}</Card.Description>

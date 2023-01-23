@@ -5,6 +5,10 @@
   @include grid(1.1fr 0.9fr, auto, 0);
   background-color: #fff;
   max-width: 100vw;
+  z-index: 5;
+  position: sticky;
+  top: 0;
+  box-shadow: $section-shadow;
 
   div.title {
     @include flex(center, flex-start, $spacing, row);

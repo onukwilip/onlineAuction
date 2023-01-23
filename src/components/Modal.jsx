@@ -3,15 +3,20 @@ import { createPortal } from "react-dom";
 import css from "@/styles/modal/Modal.module.scss";
 
 const ModalComponent = (props) => {
+  const closeModal = () => {
+    if (typeof props.showModal === "function") {
+      props.showModal(false);
+    }
+  };
   return (
     <section className={css.modal}>
-      <div className={css.background}></div>
-      {props.children}
+      <div className={css.background} onClick={closeModal}></div>
+      <div className={css.body}>{props.children}</div>
     </section>
   );
 };
 
-const Modal = ({ children }) => {
+const Modal = ({ children, show }) => {
   const portal = useRef();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -24,7 +29,7 @@ const Modal = ({ children }) => {
       <>
         {mounted &&
           createPortal(
-            <ModalComponent>{children}</ModalComponent>,
+            <ModalComponent showModal={show}>{children}</ModalComponent>,
             portal.current
           )}
       </>

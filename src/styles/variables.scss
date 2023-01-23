@@ -6,6 +6,12 @@ $spacing: 1rem;
 $big-spacing: 5rem;
 $box-shadow: 0px 0px 10px rgba(black, 0.5);
 $section-shadow: 0px 10px 30px rgba(black, 0.1);
+$glass: rgba(white, 0.3);
+$glass-gradient: linear-gradient(
+  to bottom right,
+  rgba($pry-colour, 0.5),
+  $glass
+);
 
 @mixin grid($col, $row, $gap) {
   display: grid;

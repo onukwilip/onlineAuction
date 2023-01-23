@@ -7,4 +7,16 @@
   z-index: 15;
   top: 0;
   left: 0;
+  @include flex(center, center, 0, row);
+  .background {
+    min-width: 100vw;
+    min-height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+  }
+  .body {
+    z-index: 16;
+    margin: 10px;
+  }
 }
