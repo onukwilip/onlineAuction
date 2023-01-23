@@ -14,6 +14,7 @@ import {
   Input,
 } from "semantic-ui-react";
 import { useTimer } from "react-timer-hook";
+import Footer from "@/components/Footer";
 
 class Category {
   constructor(name) {
@@ -250,6 +251,7 @@ const Shop = () => {
           </div>
         )}
       </div>
+      <Footer />
     </div>
   );
 };
