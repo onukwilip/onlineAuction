@@ -1,6 +1,6 @@
 import Head from "next/head";
 import Image from "next/image";
-import { Inter } from "@next/font/google";
+import { Inter, Modak } from "@next/font/google";
 import css from "@/styles/index/Index.module.scss";
 import PreHeader from "@/components/PreHeader";
 import PageHeader from "@/components/Header";
@@ -9,6 +9,7 @@ import Finished from "@/components/Finished";
 import Current from "@/components/Current";
 import HowItWorksClass from "@/components/HowItWorks";
 import Footer from "@/components/Footer";
+import Modal from "@/components/Modal";
 const inter = Inter({ subsets: ["latin"] });
 
 export default function Home() {

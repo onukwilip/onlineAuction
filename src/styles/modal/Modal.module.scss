@@ -1,0 +1,10 @@
+@import "../variables.scss";
+.modal {
+  min-width: 100vw;
+  min-height: 100vh;
+  position: fixed;
+  background-color: $overlay;
+  z-index: 15;
+  top: 0;
+  left: 0;
+}
