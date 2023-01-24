@@ -13,6 +13,16 @@ $glass-gradient: linear-gradient(
   $glass
 );
 
+@mixin inverted() {
+  color: $pry-colour;
+  background-color: black;
+}
+
+@mixin inverted-hover() {
+  color: black;
+  background-color: $pry-colour;
+}
+
 @mixin grid($col, $row, $gap) {
   display: grid;
   grid-template-columns: $col;
