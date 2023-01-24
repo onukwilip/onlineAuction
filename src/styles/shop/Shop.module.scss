@@ -79,6 +79,7 @@
 
 .product {
   .img-container {
+    cursor: pointer;
     .badge {
       position: absolute;
       right: 0;
@@ -110,6 +111,10 @@
         font-size: 30px;
         font-family: "Poppins";
         font-weight: normal;
+      }
+      .desc {
+        cursor: pointer;
+        // background: #000;
       }
     }
 

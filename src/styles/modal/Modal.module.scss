@@ -18,5 +18,15 @@
   .body {
     z-index: 16;
     margin: 10px;
+    animation: scale 0.3s forwards;
+  }
+}
+
+@keyframes scale {
+  from {
+    transform: scale(0.5);
+  }
+  to {
+    transform: scale(1);
   }
 }

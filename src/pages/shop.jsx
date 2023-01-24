@@ -15,6 +15,7 @@ import {
 } from "semantic-ui-react";
 import { useTimer } from "react-timer-hook";
 import Footer from "@/components/Footer";
+import { useRouter } from "next/router";
 
 class Category {
   constructor(name) {
@@ -42,7 +43,7 @@ class Product {
   }
 }
 
-const Products = [
+export const Products = [
   new Product(
     "Apple MacBook Pro 13'' 2.3GHz 128GB Space Gray",
     100,
@@ -157,7 +158,8 @@ const Filter = () => {
   );
 };
 
-const ProductUI = ({ product }) => {
+export const ProductUI = ({ product }) => {
+  const router = useRouter();
   const { seconds, minutes, hours, days, start } = useTimer({
     expiryTimestamp: new Date(product?.expiry),
     onExpire: () => {},
@@ -166,9 +168,18 @@ const ProductUI = ({ product }) => {
     start();
   }, []);
 
+  const onProductClick = (id) => {
+    router.push(`/product/${id}`);
+  };
+
   return (
     <Card className={css.product}>
-      <div className={css["img-container"]}>
+      <div
+        className={css["img-container"]}
+        onClick={() => {
+          onProductClick("12345");
+        }}
+      >
         <div className={css.badge}>
           <em>
             {days} <em className={css.day}>{days === 1 ? "day" : "days"}</em>
@@ -189,7 +200,14 @@ const ProductUI = ({ product }) => {
             <sup>$</sup> {product?.currentBid}
           </em>
         </Card.Header>
-        <Card.Description>{product?.name}</Card.Description>
+        <Card.Description
+          onClick={() => {
+            onProductClick("12345");
+          }}
+          className={css.desc}
+        >
+          {product?.name}
+        </Card.Description>
       </Card.Content>
       <Card.Content extra className={css.actions}>
         <Button icon labelPosition="right" className={css.submit}>
