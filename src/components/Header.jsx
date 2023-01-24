@@ -99,19 +99,20 @@ const Header = () => {
       <nav className={`${showMobile ? css.mobile : ""} ${css.menu}`}>
         <ul>
           <li>
-            <Link href="/">Home</Link>
+            <Link href="/">
+              <Icon name="home" /> Home
+            </Link>
+          </li>
+
+          <li>
+            <Link href="/shop">
+              <Icon name="cart" /> Shop
+            </Link>
           </li>
           <li>
-            <Link href="/">About</Link>
-          </li>
-          <li>
-            <Link href="/">Service</Link>
-          </li>
-          <li>
-            <Link href="/shop">Buy</Link>
-          </li>
-          <li>
-            <Link href="">Sell</Link>
+            <Link href="/">
+              <Icon name="user" /> Dashboard
+            </Link>
           </li>
         </ul>
         <div

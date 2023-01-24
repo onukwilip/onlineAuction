@@ -251,6 +251,7 @@ const Shop = () => {
           </div>
         )}
       </div>
+      <br />
       <Footer />
     </div>
   );
