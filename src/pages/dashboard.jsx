@@ -409,9 +409,11 @@ const MenuComponent = () => {
   const router = useRouter();
 
   return (
-    <Glassmorphism>
-      <h3>Dashboard</h3>
-      <Divider />
+    <Glassmorphism className={css.menu}>
+      <div className={css.heading}>
+        <h3>Dashboard</h3>
+        <Divider />
+      </div>
       <ul className={css.list}>
         {menus.map((menu, i) => (
           <li
@@ -422,7 +424,8 @@ const MenuComponent = () => {
               });
             }}
           >
-            <i className={menu.icon} /> {menu.name}
+            <i className={menu.icon} />
+            <em>{menu.name}</em>
           </li>
         ))}
       </ul>
@@ -433,7 +436,6 @@ const MenuComponent = () => {
 const Dashboard = () => {
   const router = useRouter();
   const slug = router.query?.tab;
-  const [showMobile, setShowMobile] = useState(false);
 
   const getComponent = (slug) => {
     if (!slug || slug?.trim() === "") {
@@ -453,14 +455,6 @@ const Dashboard = () => {
         </div>
         <Header />
         <div className={css.body}>
-          <div
-            className={css.hamburger}
-            onClick={() => {
-              setShowMobile((prev) => !prev);
-            }}
-          >
-            <i className="fa-solid fa-grip-vertical"></i>
-          </div>
           <div className={css.menu}>
             <MenuComponent />
           </div>
@@ -468,11 +462,6 @@ const Dashboard = () => {
             <Glassmorphism>{getComponent(slug)}</Glassmorphism>
           </div>
         </div>
-        {showMobile && (
-          <div className={css["mobile-menu"]}>
-            <MenuComponent />
-          </div>
-        )}
         <br />
         <Footer />
       </div>
