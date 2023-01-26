@@ -18,7 +18,7 @@ export const sendAuth = async (id, body) => {
   );
 
   if (updatedUser) {
-    const link = `http://aunction.vercel.app/auth/?id=${toBase64(
+    const link = `http://aunction.vercel.app/auth/verify/?id=${toBase64(
       id
     )}&code=${toBase64(code.toString())}`;
     const mail = await sendMail({
@@ -1634,17 +1634,17 @@ export default async function auth(req, res) {
     return res.status(400).json({ message: "An error occured" });
   }
   if (req.method === "GET") {
-    const { base64Code, base64Id } = req.query;
+    const { code: base64Code, id: base64Id } = req.query;
 
     const code = fromBase64(base64Code);
     const id = fromBase64(base64Id);
 
-    const user = await User.findById({ _id: id });
+    const user = await User.findOne({ _id: id });
     if (!user) {
       return res.status(404).json({ message: "User does not exist" });
     }
     if (
-      code === user?.auth?.code &&
+      +code === user?.auth?.code &&
       new Date().getTime() < new Date(user?.auth?.expiry)?.getTime()
     ) {
       await User.updateOne(
@@ -1657,5 +1657,7 @@ export default async function auth(req, res) {
 
     return res.status(400).json({ message: "Invalid OTP" });
   }
-  return res.status(400).json({ message: "Only Post ruests are allowed" });
+  return res
+    .status(400)
+    .json({ message: "Only GET and POST ruests are allowed" });
 }
