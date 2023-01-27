@@ -1,0 +1,85 @@
+import connect from "@/config/db";
+import Bid from "@/models/Bid";
+import { authMiddleware } from "@/utils";
+
+export default async function Bids(req, res) {
+  connect();
+
+  const auth = await authMiddleware({ req, res });
+  if (auth?.code !== 200) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const { query, body } = req;
+
+  if (req.method === "PUT") {
+    // GET BID WITH ID
+    const bid = await Bid.findOne({ _id: query.id });
+
+    // IF BID DOES NOT EXIST RETURN 404
+    if (!bid) return res.status(404).json({ message: "Bid not found" });
+
+    //IF THIS BID WAS POSTED BY THIS USER RETURN 405
+    if (bid?.userId === auth?.data?.id)
+      return res.status(405).json({
+        code: "ItemPostedByUser",
+        message: "You can't bid for an item you posted",
+      });
+
+    //IF AMOUNT IS LESS THAN STARTING BID RETURN 400
+    if (body.amount < bid?.startingBid)
+      return res.status(400).json({
+        code: "AmountLessThanStartBid",
+        message: "Amount must be greater than the starting bid",
+      });
+
+    // GET THE CURRENT BID
+    const currentBid = {
+      userId: auth?.data?.id,
+      amount: body.amount,
+    };
+    //GET THE PREVIOUS BIDS
+    const updatedBids = bid?.bids || [];
+
+    //FIND THE INDEX OF BID WHERE BID.USERID EQUALS CURRENT USER
+    const userHasBidIndex = updatedBids?.findIndex(
+      (prevBids) => prevBids?.userId === auth?.data?.id
+    );
+    //IF USER HAS PREVIOUSLY BID
+    if (userHasBidIndex >= 0) {
+      //UPDATE  BID WITH USERID WITH NEW AMOUNT
+      updatedBids[userHasBidIndex].amount = currentBid?.amount;
+    }
+    //ELSE
+    else {
+      //ADD CURRENT BID TO LIST OF PREVIOUS BIDS
+      updatedBids.push(currentBid);
+    }
+
+    //GET THE HIGHEST BID AMONGST THE BID ARRAY
+    const highestBid = updatedBids.sort((p1, p2) =>
+      p1?.amount < p2?.amount ? 1 : p1?.amount > p2?.amount ? -1 : 0
+    )[0];
+
+    //UPDATE BID IN DATABASE
+    const updatedBid = await Bid.updateOne(
+      { _id: query.id },
+      { $set: { bids: updatedBids, currentBid: highestBid?.amount } },
+      { new: true }
+    );
+
+    //IF BID NOT UPDATED RETURN 400
+    if (!updatedBid) {
+      return res.status(400).json({
+        code: "ServerError",
+        message: "Something went wrong",
+      });
+    }
+    //   ELSE RETURN 200
+    return res.status(200).json(updatedBid);
+  }
+
+  return res
+    .status(400)
+    .json({ code: "InvalidMethod", message: "Method not allowed" });
+}

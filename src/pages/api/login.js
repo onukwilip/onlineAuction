@@ -1,5 +1,6 @@
 import connect from "@/config/db";
 import User from "@/models/User";
+import { generateJWT, generateToken } from "@/utils";
 import bcrypt from "bcrypt";
 
 export default async function Login(req, res) {
@@ -12,7 +13,18 @@ export default async function Login(req, res) {
   if (user && (await bcrypt.compare(password, user?.password))) {
     if (user.authenticated === true) {
       // Return JWT token
-      return res.status(200).json({ message: "Login successfull" });
+      const token = await generateToken({
+        userId: user?.id,
+        email: user?.email,
+        req,
+        res,
+      });
+
+      return res.status(200).json({
+        message: "Login successfull",
+        access_token: token?.data?.accessToken,
+        refresh_token: token?.data?.refreshToken,
+      });
     }
     return res.status(400).json({ message: "User not authenticated" });
   }

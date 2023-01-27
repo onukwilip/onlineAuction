@@ -134,6 +134,8 @@ const Categories = [
   new Category("Fashion"),
   new Category("PC"),
   new Category("Pets"),
+  new Category("Buildings"),
+  new Category("Vehicles"),
 ];
 
 const Filter = () => {

@@ -16,14 +16,15 @@ export const sendAuth = async (id, body) => {
     },
     { new: true }
   );
+  const user = await User.findOne({ _id: id });
 
   if (updatedUser) {
     const link = `http://aunction.vercel.app/auth/verify/?id=${toBase64(
       id
     )}&code=${toBase64(code.toString())}`;
     const mail = await sendMail({
-      from: body.from,
-      to: body.to,
+      from: "gerydragos@gmail.com",
+      to: user?.email,
       subject: "onlineAuction (Confirm your email address)",
       text: null,
       html: `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">

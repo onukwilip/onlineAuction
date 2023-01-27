@@ -26,7 +26,7 @@ export default async function signup(req, res) {
     authenticated: false,
     auth: {
       code: 0,
-      expiry: null,
+      expiry: new Date(),
     },
   });
 
