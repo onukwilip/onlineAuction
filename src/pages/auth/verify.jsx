@@ -31,11 +31,14 @@ const Verify = (props) => {
 
 export default Verify;
 
-export const getServerSideProps = async ({ req, res }) => {
-  const { query } = req;
-  const response = await axios.get(
-    `${process.env.API_DOMAIN}/api/auth?id=${query.id}&code=${query.code}`
-  );
+export const getServerSideProps = async ({ req, res, query }) => {
+  const response = await axios
+    .get(
+      `${process.env.API_DOMAIN}/api/auth?id=${query?.id}&code=${query?.code}`
+    )
+    .catch((e) => {});
+
+  console.log("QUERY", query);
 
   if (response) {
     return {
