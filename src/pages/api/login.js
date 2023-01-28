@@ -27,7 +27,9 @@ export default async function Login(req, res) {
         user: user,
       });
     }
-    return res.status(400).json({ message: "User not authenticated" });
+    return res
+      .status(400)
+      .json({ message: "User not authenticated", user: { _id: user?._id } });
   }
 
   return res.status(404).json({ message: "Incorrect username or password" });

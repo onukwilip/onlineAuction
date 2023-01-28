@@ -8,6 +8,7 @@ import axios from "axios";
 import { useRouter } from "next/router";
 import CustomLoader from "@/components/Loader";
 import ErrorMessage from "./Error";
+import { clientToBase64 } from "@/clientUtils";
 
 const Login = (props) => {
   const router = useRouter();
@@ -67,6 +68,11 @@ const Login = (props) => {
         }
       },
       (err) => {
+        if (err?.response?.status === 400) {
+          router.replace(
+            `/auth?id=${clientToBase64(err?.response?.data?.user?._id)}`
+          );
+        }
         console.log("Error", err);
       }
     );
@@ -224,11 +230,11 @@ const Signup = (props) => {
     sendRequest(
       (res) => {
         if ((res.status = 200)) {
-          router.replace(`/auth?id=${res.data?.user?._id}`);
+          router.replace(`/auth?id=${clientToBase64(res.data?.user?._id)}`);
         }
       },
       (err) => {
-        console.log("Error", e);
+        console.log("Error", err);
       }
     );
 
@@ -314,7 +320,7 @@ const Signup = (props) => {
           <Checkbox label="I agree with the terms & conditions" />
         </Form.Field>
         {loading && <CustomLoader />}
-        {error && <ErrorMessage label={error?.response?.data?.message} />}
+        {error && <ErrorMessage>{error?.response?.data?.message}</ErrorMessage>}
         <Button type="submit" className={css.submit}>
           Submit
         </Button>
