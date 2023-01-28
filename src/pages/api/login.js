@@ -24,6 +24,7 @@ export default async function Login(req, res) {
         message: "Login successfull",
         access_token: token?.data?.accessToken,
         refresh_token: token?.data?.refreshToken,
+        user: user,
       });
     }
     return res.status(400).json({ message: "User not authenticated" });

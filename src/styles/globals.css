@@ -39,4 +39,24 @@ em {
   font-style: normal;
 }
 .error-container {
+  list-style-type: none;
+  padding: 10px;
+  border: 3px double orangered;
+  background-color: rgba(255, 69, 0, 0.2);
+  border-radius: 10px;
+  margin: 10px;
+}
+.error-container li {
+  margin: 0;
+  padding: 0;
+  color: white;
+  text-align: center;
+}
+
+.loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px;
+  flex-direction: column;
 }

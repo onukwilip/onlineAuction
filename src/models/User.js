@@ -15,7 +15,6 @@ const userModel = mongoose.Schema({
   },
   phoneNumber: {
     type: Number,
-    required: true,
   },
   image: String,
   authenticated: {

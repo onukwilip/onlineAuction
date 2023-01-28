@@ -1,10 +1,16 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import css from "@/styles/loginSignup/LoginSignup.module.scss";
 import { Button, Checkbox, Form, Input } from "semantic-ui-react";
 import Link from "next/link";
 import { useInput, useForm } from "use-manage-form";
+import useAjaxHook from "use-ajax-request";
+import axios from "axios";
+import { useRouter } from "next/router";
+import CustomLoader from "@/components/Loader";
+import ErrorMessage from "./Error";
 
 const Login = (props) => {
+  const router = useRouter();
   const {
     value: email,
     isValid: emailIsValid,
@@ -25,6 +31,21 @@ const Login = (props) => {
     reset: resetPassword,
   } = useInput((/**@type String */ value) => value.trim() !== "");
 
+  const body = {
+    email: email,
+    password: password,
+  };
+
+  const { sendRequest, data, loading, error } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/login`,
+      method: "POST",
+      data: body,
+      withCredentials: true,
+    },
+  });
+
   const { executeBlurHandlers, formIsValid, reset } = useForm({
     blurHandlers: [onEmailBlur, onPasswordBlur],
     validateOptions: () => emailIsValid && passwordlIsValid,
@@ -39,6 +60,16 @@ const Login = (props) => {
     }
 
     console.log("SUBMITTED", { email, password });
+    sendRequest(
+      (res) => {
+        if (res.status === 200) {
+          router.replace("/dashboard");
+        }
+      },
+      (err) => {
+        console.log("Error", err);
+      }
+    );
     reset();
   };
   return (
@@ -86,6 +117,8 @@ const Login = (props) => {
           <Checkbox label="Remember me" />
           <Link href="">Forgotten password?</Link>
         </Form.Field>
+        {loading && <CustomLoader />}
+        {error && <ErrorMessage>{error?.response?.data?.message}</ErrorMessage>}
         <Button type="submit" className={css.submit}>
           Submit
         </Button>
@@ -105,6 +138,8 @@ const Login = (props) => {
 };
 
 const Signup = (props) => {
+  const router = useRouter();
+
   const {
     value: email,
     isValid: emailIsValid,
@@ -147,6 +182,23 @@ const Signup = (props) => {
     (/**@type String */ value) => value?.trim() !== "" && value === password
   );
 
+  const body = {
+    email: email,
+    password: password,
+    name: name,
+    phoneNumber: "09071589571",
+  };
+
+  const { sendRequest, data, loading, error } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/signup`,
+      method: "POST",
+      data: body,
+      withCredentials: true,
+    },
+  });
+
   const { executeBlurHandlers, formIsValid, reset } = useForm({
     blurHandlers: [
       onEmailBlur,
@@ -168,6 +220,17 @@ const Signup = (props) => {
       executeBlurHandlers();
       return false;
     }
+
+    sendRequest(
+      (res) => {
+        if ((res.status = 200)) {
+          router.replace(`/auth?id=${res.data?.user?._id}`);
+        }
+      },
+      (err) => {
+        console.log("Error", e);
+      }
+    );
 
     console.log("SUBMITTED", { email, password });
     reset();
@@ -250,6 +313,8 @@ const Signup = (props) => {
         <Form.Field className={css.check}>
           <Checkbox label="I agree with the terms & conditions" />
         </Form.Field>
+        {loading && <CustomLoader />}
+        {error && <ErrorMessage label={error?.response?.data?.message} />}
         <Button type="submit" className={css.submit}>
           Submit
         </Button>
