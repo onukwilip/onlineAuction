@@ -1,11 +1,12 @@
 import Glassmorphism from "@/components/Glassmorphism";
-import React from "react";
+import React, { useEffect } from "react";
 import { HeadComponent } from "..";
 import PreHeader from "@/components/PreHeader";
 import Header from "@/components/Header";
 import css from "@/styles/auth/Auth.module.scss";
 import useAjaxHook from "use-ajax-request";
 import axios from "axios";
+import Link from "next/link";
 
 const Verify = (props) => {
   return (
@@ -20,7 +21,10 @@ const Verify = (props) => {
           <Glassmorphism className={css.trans}>
             <h1>{props.message}</h1>
             <p>
-              <a> Go to home page </a>
+              <Link href="/"> Go to home page </Link>{" "}
+              {props.code === 200 && (
+                <Link href="/dashboard"> Go to Dashboard </Link>
+              )}
             </p>
           </Glassmorphism>
         </div>
@@ -44,6 +48,7 @@ export const getServerSideProps = async ({ req, res, query }) => {
     return {
       props: {
         message: "Congratulations, your email address has been confirmed",
+        code: 200,
       },
     };
   }
@@ -51,6 +56,7 @@ export const getServerSideProps = async ({ req, res, query }) => {
   return {
     props: {
       message: "Sorry, your link is either invalid or expired",
+      code: 400,
     },
   };
 };

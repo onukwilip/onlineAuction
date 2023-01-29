@@ -2,6 +2,11 @@ import React, { useEffect } from "react";
 import css from "@/styles/current/Current.module.scss";
 import { Button, Card, Icon } from "semantic-ui-react";
 import { useTimer } from "react-timer-hook";
+import useAjaxHook from "use-ajax-request";
+import ResponseError from "./ResponseError";
+import CustomLoader from "./Loader";
+import axios from "axios";
+import Bid from "@/components/Bid";
 
 class CurrentAuctionClass {
   constructor(name, price, start, image, expiry) {
@@ -44,62 +49,50 @@ const CurrentAuctions = [
   ),
 ];
 
-const CurrentItem = ({ item }) => {
-  const { seconds, minutes, hours, days, start } = useTimer({
-    expiryTimestamp: new Date(item?.expiry),
-    onExpire: () => {},
+const Current = () => {
+  const {
+    sendRequest,
+    data: bids,
+    error,
+    loading,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/bids/query`,
+      method: "POST",
+      data: [
+        {
+          $limit: 5,
+        },
+        {
+          $match: {
+            expired: false,
+          },
+        },
+      ],
+    },
   });
 
   useEffect(() => {
-    start();
+    sendRequest();
   }, []);
-  return (
-    <div className={css["current-item"]}>
-      <Card>
-        <div className={css["img-container"]}>
-          <div className={css.badge}>
-            <em>
-              {days} <em className={css.day}>{days === 1 ? "day" : "days"}</em>
-            </em>
-            &nbsp;
-            <em>{hours} </em>:<em>{minutes} </em>:<em>{seconds}</em>
-          </div>
-          <img src={item?.image} alt="" />
-        </div>
-        <Card.Content className={css["card-content"]}>
-          <Card.Meta className={css["start-bid"]}>
-            <span className="date">
-              Start bid: <em>${item?.startingBid}</em>
-            </span>
-          </Card.Meta>
-          <Card.Header className={css["price"]}>
-            <em>
-              <sup>$</sup> {item?.currentBid}
-            </em>
-          </Card.Header>
-          <Card.Description>{item?.name}</Card.Description>
-        </Card.Content>
-        <Card.Content extra className={css.actions}>
-          <Button icon labelPosition="right" className={css.submit}>
-            Submit bid
-            <Icon name="right arrow" />
-          </Button>
-        </Card.Content>
-      </Card>
-    </div>
-  );
-};
 
-const Current = () => {
   return (
     <div className={css["current"]}>
       <h1 className={css.title}>
         <b>Current</b> <em>Aunctions</em>
       </h1>
       <div className={css.auctions}>
-        {CurrentAuctions.map((finished, i) => (
-          <CurrentItem item={finished} key={i} />
-        ))}
+        {loading ? (
+          <CustomLoader />
+        ) : (
+          <>
+            {error && <ResponseError>No bids available</ResponseError>}
+            {bids?.map((finished, i) => (
+              <Bid item={finished} key={i} />
+            ))}
+          </>
+        )}
       </div>
       <div className={css["actions"]}>
         <Button icon labelPosition="right" className={css.more}>

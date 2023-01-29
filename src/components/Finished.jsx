@@ -1,6 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import css from "@/styles/finished/Finished.module.scss";
 import { Card, Image } from "semantic-ui-react";
+import useAjaxHook from "use-ajax-request";
+import axios from "axios";
+import ResponseError from "./ResponseError";
+import CustomLoader from "./Loader";
+import { FinishedBid } from "./Bid";
 
 class FinishedItemClass {
   constructor(name, price, image) {
@@ -33,37 +38,71 @@ const AllItems = [
   ),
 ];
 
-const FinishedItem = ({ item }) => {
-  return (
-    <div className={css["finished-item"]}>
-      <Card>
-        <div className={css["img-container"]}>
-          <div className={css.badge}>
-            <em>Final price</em>
-            <em>
-              <sup>$</sup> <em>{item?.price}</em>
-            </em>
-          </div>
-          <img src={item?.image} alt="" />
-        </div>
-        <Card.Content>
-          <Card.Header>{item?.name}</Card.Header>
-        </Card.Content>
-      </Card>
-    </div>
-  );
-};
+// const FinishedItem = ({ item }) => {
+//   return (
+//     <div className={css["finished-item"]}>
+//       <Card>
+//         <div className={css["img-container"]}>
+//           <div className={css.badge}>
+//             <em>Final price</em>
+//             <em>
+//               <sup>$</sup> <em>{item?.price}</em>
+//             </em>
+//           </div>
+//           <img src={item?.image} alt="" />
+//         </div>
+//         <Card.Content>
+//           <Card.Header>{item?.name}</Card.Header>
+//         </Card.Content>
+//       </Card>
+//     </div>
+//   );
+// };
 
 const Finished = () => {
+  const {
+    sendRequest,
+    data: bids,
+    error,
+    loading,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/bids/query`,
+      method: "POST",
+      data: [
+        {
+          $limit: 5,
+        },
+        {
+          $match: {
+            expired: true,
+          },
+        },
+      ],
+    },
+  });
+
+  useEffect(() => {
+    sendRequest();
+  }, []);
+
   return (
     <div className={css.finished}>
       <h1 className={css.title}>
         <b>Finished</b> <em>Aunctions</em>
       </h1>
       <div className={css.auctions}>
-        {AllItems.map((finished, i) => (
-          <FinishedItem item={finished} key={i} />
-        ))}
+        {loading ? (
+          <CustomLoader />
+        ) : (
+          <>
+            {error && <ResponseError>No bids available</ResponseError>}
+            {bids?.map((finished, i) => (
+              <FinishedBid item={finished} key={i} />
+            ))}
+          </>
+        )}
       </div>
     </div>
   );

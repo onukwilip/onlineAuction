@@ -60,3 +60,18 @@ em {
   margin: 10px;
   flex-direction: column;
 }
+
+.response-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 1rem;
+}
+.response-error h2 {
+  color: white;
+}
