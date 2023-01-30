@@ -143,7 +143,7 @@ const Categories = [
   new Category("Vehicles"),
 ];
 
-const Filter = ({ onFilter, setFilterLoading }) => {
+const Filter = ({ onFilter, setFilterLoading, getAll }) => {
   const submitData = [];
   const [categoriesToSubmit, setCategoriesToSubmit] = useState({});
 
@@ -193,6 +193,10 @@ const Filter = ({ onFilter, setFilterLoading }) => {
     e?.preventDefault();
     for (const category in categoriesToSubmit) {
       submitData.push(categoriesToSubmit[category]);
+    }
+
+    if (submitData?.length < 1) {
+      return getAll();
     }
 
     // console.log("During submission", categoriesToSubmit);
@@ -252,11 +256,15 @@ const Shop = () => {
     setBids(foundBids);
   };
 
-  useEffect(() => {
+  const getBids = () => {
     sendRequest((res) => {
       setBids(res.data);
       setAllBids(res.data);
     });
+  };
+
+  useEffect(() => {
+    getBids();
   }, []);
 
   return (
@@ -272,7 +280,11 @@ const Shop = () => {
         </div>
         <div className={css["sub-body"]}>
           <div className={css["filter-container"]}>
-            <Filter onFilter={onFilter} setFilterLoading={setLoadingState} />
+            <Filter
+              onFilter={onFilter}
+              setFilterLoading={setLoadingState}
+              getAll={getBids}
+            />
           </div>
 
           <div className={css["items-container"]}>
@@ -316,7 +328,11 @@ const Shop = () => {
         </div>
         {showMobileFilter && (
           <div className={css["mobile-filter"]} _>
-            <Filter onFilter={onFilter} setFilterLoading={setLoadingState} />
+            <Filter
+              onFilter={onFilter}
+              setFilterLoading={setLoadingState}
+              getAll={getBids}
+            />
           </div>
         )}
       </div>
