@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button, Divider, Feed, Form, Icon, Input } from "semantic-ui-react";
 import { Products, ProductUI } from "@/pages/shop";
 import Footer from "./Footer";
+import Bid from "./Bid";
 
 const product = {
   name: "Apple MacBook Pro 13'' 2.3GHz 128GB Space Gray",
@@ -112,7 +113,7 @@ const ProductComponent = (props) => {
           </div>
           <div className={css.products}>
             {Products?.slice(0, 4).map((product, i) => (
-              <ProductUI product={product} />
+              <Bid item={product} />
             ))}
           </div>
         </div>

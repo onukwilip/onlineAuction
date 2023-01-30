@@ -13,6 +13,10 @@ const Bid = ({ item }) => {
 
   const router = useRouter();
 
+  const redirect=()=>{
+      router.push(`/product/${item?._id}`);
+  }
+
   useEffect(() => {
     start();
   }, []);
@@ -31,6 +35,7 @@ const Bid = ({ item }) => {
           <img
             src={item?.image?.trim() !== "" ? item?.image : dummyImage?.src}
             alt=""
+            onClick={redirect}
           />
         </div>
         <Card.Content className={css["card-content"]}>
@@ -44,16 +49,14 @@ const Bid = ({ item }) => {
               <sup>$</sup> {item?.currentBid}
             </em>
           </Card.Header>
-          <Card.Description>{item?.name}</Card.Description>
+          <Card.Description onClick={redirect}>{item?.name}</Card.Description>
         </Card.Content>
         <Card.Content extra className={css.actions}>
           <Button
             icon
             labelPosition="right"
             className={css.submit}
-            onClick={() => {
-              router.push(`/product/${item?._id}`);
-            }}
+            onClick={redirect}
           >
             Submit bid
             <Icon name="right arrow" />

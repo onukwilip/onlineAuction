@@ -18,6 +18,9 @@ import Footer from "@/components/Footer";
 import { useRouter } from "next/router";
 import useAjaxHook from "use-ajax-request";
 import axios from "axios";
+import CustomLoader from "@/components/Loader";
+import ResponseError from "@/components/ResponseError";
+import Bid from "@/components/Bid";
 
 class Category {
   constructor(name) {
@@ -140,19 +143,77 @@ const Categories = [
   new Category("Vehicles"),
 ];
 
-const Filter = () => {
+const Filter = ({ onFilter, setFilterLoading }) => {
+  const submitData = [];
+  const [categoriesToSubmit, setCategoriesToSubmit] = useState({});
+
+  const {
+    sendRequest: filter,
+    data,
+    loading,
+    error,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/bids/category`,
+      method: "POST",
+      data: submitData,
+    },
+  });
+
+  setFilterLoading(loading);
+
+  const addOrRemoveCategory = (/**@type Event */ e, other) => {
+    if (other?.checked === true) {
+      setCategoriesToSubmit((prev) => ({
+        ...prev,
+        [other.value]: { category: other.value },
+      }));
+    } else {
+      const newCategories = categoriesToSubmit;
+      delete newCategories[other?.value];
+      setCategoriesToSubmit(newCategories);
+    }
+
+    console.log("categories", categoriesToSubmit);
+    console.log("other", other);
+  };
+
+  const onSuccess = (res) => {
+    onFilter(res.data);
+  };
+
+  const onError = (err) => {
+    if (err?.response?.status === 404) {
+      onFilter([]);
+    }
+  };
+
+  const submitHandler = (e) => {
+    e?.preventDefault();
+    for (const category in categoriesToSubmit) {
+      submitData.push(categoriesToSubmit[category]);
+    }
+
+    // console.log("During submission", categoriesToSubmit);
+
+    filter(onSuccess, onError);
+  };
+
   return (
     <div className={css.filter}>
       <h2>Filter</h2>
       <Divider />
       <h3>Categories</h3>
-      <Form>
+      <Form onSubmit={submitHandler}>
         {Categories?.map((category, i) => (
           <Checkbox
             slider
             label={category.name}
             className={css.category}
             key={i}
+            value={category.name}
+            onChange={addOrRemoveCategory}
           />
         ))}
         <br />
@@ -162,83 +223,42 @@ const Filter = () => {
   );
 };
 
-export const ProductUI = ({ product }) => {
-  const router = useRouter();
-  const { seconds, minutes, hours, days, start } = useTimer({
-    expiryTimestamp: new Date(product?.expiry),
-    onExpire: () => {},
-  });
-  useEffect(() => {
-    start();
-  }, []);
-
-  const onProductClick = (id) => {
-    router.push(`/product/${id}`);
-  };
-
-  return (
-    <Card className={css.product}>
-      <div
-        className={css["img-container"]}
-        onClick={() => {
-          onProductClick("12345");
-        }}
-      >
-        <div className={css.badge}>
-          <em>
-            {days} <em className={css.day}>{days === 1 ? "day" : "days"}</em>
-          </em>
-          &nbsp;
-          <em>{hours} </em>:<em>{minutes} </em>:<em>{seconds}</em>
-        </div>
-        <img src={product?.image} alt="" />
-      </div>
-      <Card.Content className={css["card-content"]}>
-        <Card.Meta className={css["start-bid"]}>
-          <span className="date">
-            Start bid: <em>${product?.startingBid}</em>
-          </span>
-        </Card.Meta>
-        <Card.Header className={css["price"]}>
-          <em>
-            <sup>$</sup> {product?.currentBid}
-          </em>
-        </Card.Header>
-        <Card.Description
-          onClick={() => {
-            onProductClick("12345");
-          }}
-          className={css.desc}
-        >
-          {product?.name}
-        </Card.Description>
-      </Card.Content>
-      <Card.Content extra className={css.actions}>
-        <Button icon labelPosition="right" className={css.submit}>
-          Submit bid
-          <Icon name="right arrow" />
-        </Button>
-      </Card.Content>
-    </Card>
-  );
-};
-
 const Shop = () => {
   const [showMobileFilter, setShowMobileFilter] = useState(false);
-  const {sendRequest, data, loading, error}= useAjaxHook({
+  const [filterLoading, setFilterLoading] = useState(false);
+  const [bids, setBids] = useState([]);
+  const [allBids, setAllBids] = useState([]);
+  const { sendRequest, loading, error } = useAjaxHook({
     instance: axios,
-    options:{
-      url:`${process.env.API_DOMAIN}/api/bids`,
-      method:'GET'
-    }
-  })
+    options: {
+      url: `${process.env.API_DOMAIN}/api/bids`,
+      method: "GET",
+    },
+  });
 
-  console.log('DATA', data)
+  const onFilter = (value) => {
+    setBids(value);
+    setAllBids(value);
+  };
+
+  const setLoadingState = (value) => {
+    setFilterLoading(value);
+  };
+
+  const onSearch = (/**@type String */ value) => {
+    const foundBids = allBids.filter((bids) =>
+      bids?.name?.toLowerCase()?.includes(value.toLowerCase())
+    );
+    setBids(foundBids);
+  };
 
   useEffect(() => {
-    sendRequest()
-  }, [])
-  
+    sendRequest((res) => {
+      setBids(res.data);
+      setAllBids(res.data);
+    });
+  }, []);
+
   return (
     <div className={css.shop}>
       <HeadComponent />
@@ -252,7 +272,7 @@ const Shop = () => {
         </div>
         <div className={css["sub-body"]}>
           <div className={css["filter-container"]}>
-            <Filter />
+            <Filter onFilter={onFilter} setFilterLoading={setLoadingState} />
           </div>
 
           <div className={css["items-container"]}>
@@ -263,6 +283,9 @@ const Shop = () => {
                   iconPosition="left"
                   placeholder="Search items..."
                   className={css.search}
+                  onChange={(e) => {
+                    onSearch(e?.target?.value);
+                  }}
                 />
               </Form>
               <Icon
@@ -275,15 +298,25 @@ const Shop = () => {
             </div>
             <Divider />
             <div className={css.items}>
-              {Products.map((product, i) => (
-                <ProductUI product={product} key={i} />
-              ))}
+              {loading || filterLoading ? (
+                <CustomLoader />
+              ) : (
+                <>
+                  {error ||
+                    (bids?.length < 1 && (
+                      <ResponseError>No bids available</ResponseError>
+                    ))}
+                  {bids?.map((finished, i) => (
+                    <Bid item={finished} key={i} />
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </div>
         {showMobileFilter && (
           <div className={css["mobile-filter"]} _>
-            <Filter />
+            <Filter onFilter={onFilter} setFilterLoading={setLoadingState} />
           </div>
         )}
       </div>
