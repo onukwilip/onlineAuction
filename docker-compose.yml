@@ -1,0 +1,13 @@
+---
+version: '3.8'
+services:
+  app:
+    build: .
+    container_name: gereagragos-fiverr-project
+    ports:
+      - 3000:3000
+    environment:
+      MONGODB_URI: mongodb+srv://gery:dregos@microservices-cluster.xphnago.mongodb.net/auction-db?retryWrites=true&w=majority
+      SMTP_APP_PASSWORD: pglolyhpvcqobkib
+      JWT_KEY: 13i4uuor8324
+      API_DOMAIN: http://localhost:3000

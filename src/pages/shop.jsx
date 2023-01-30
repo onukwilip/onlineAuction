@@ -16,6 +16,8 @@ import {
 import { useTimer } from "react-timer-hook";
 import Footer from "@/components/Footer";
 import { useRouter } from "next/router";
+import useAjaxHook from "use-ajax-request";
+import axios from "axios";
 
 class Category {
   constructor(name) {
@@ -223,6 +225,20 @@ export const ProductUI = ({ product }) => {
 
 const Shop = () => {
   const [showMobileFilter, setShowMobileFilter] = useState(false);
+  const {sendRequest, data, loading, error}= useAjaxHook({
+    instance: axios,
+    options:{
+      url:`${process.env.API_DOMAIN}/api/bids`,
+      method:'GET'
+    }
+  })
+
+  console.log('DATA', data)
+
+  useEffect(() => {
+    sendRequest()
+  }, [])
+  
   return (
     <div className={css.shop}>
       <HeadComponent />
