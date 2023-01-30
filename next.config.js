@@ -9,6 +9,6 @@ const nextConfig = {
     API_DOMAIN: "https://aunction.vercel.app",
     // API_DOMAIN: "http://localhost:3001",
   },
-};
+}; 
 
 module.exports = nextConfig;
