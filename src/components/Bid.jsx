@@ -1,25 +1,63 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, Card, Icon } from "semantic-ui-react";
 import css from "@/styles/bid/Bid.module.scss";
 import { useTimer } from "react-timer-hook";
 import dummyImage from "@/assets/img/dummy-product.png";
 import { useRouter } from "next/router";
+import useAjaxHook from "use-ajax-request";
+import axios from "axios";
 
 const Bid = ({ item }) => {
-  const { seconds, minutes, hours, days, start } = useTimer({
-    expiryTimestamp: new Date(item?.expiry),
-    onExpire: () => {},
+  const router = useRouter();
+  const [expired, setExpired] = useState(item?.expired);
+  const { sendRequest: sendExpired } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/bids/${item?._id}/expire`,
+      method: "PUT",
+    },
   });
 
-  const router = useRouter();
+  const redirect = () => {
+    router.push(`/product/${item?._id}`);
+  };
 
-  const redirect=()=>{
-      router.push(`/product/${item?._id}`);
-  }
+  const onExpire = () => {
+    sendExpired((res) => setExpired(true));
+  };
+
+  const { seconds, minutes, hours, days, start } = useTimer({
+    expiryTimestamp: new Date(item?.expiry),
+    onExpire,
+  });
 
   useEffect(() => {
     start();
   }, []);
+
+  if (expired) {
+    return (
+      <div className={css["finished-bid"]}>
+        <Card>
+          <div className={css["img-container"]}>
+            <div className={css.badge}>
+              <em>Final price</em>
+              <em>
+                <sup>$</sup> <em>{item?.price || 0}</em>
+              </em>
+            </div>
+            <img
+              src={item?.image?.trim() !== "" ? item?.image : dummyImage?.src}
+              alt=""
+            />
+          </div>
+          <Card.Content>
+            <Card.Header>{item?.name}</Card.Header>
+          </Card.Content>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className={css["bid"]}>
@@ -75,7 +113,7 @@ export const FinishedBid = ({ item }) => {
           <div className={css.badge}>
             <em>Final price</em>
             <em>
-              <sup>$</sup> <em>{item?.price}</em>
+              <sup>$</sup> <em>{item?.price || 0}</em>
             </em>
           </div>
           <img
