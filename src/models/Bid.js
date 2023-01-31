@@ -4,6 +4,7 @@ const BidModel = mongoose.Schema({
   name: { type: String, required: true },
   startingBid: { type: Number, required: true },
   currentBid: { type: Number, required: true },
+  highestBidder: { type: String, required: true },
   expiry: { type: Date, required: true },
   expired: { type: Boolean, required: true },
   image: String,

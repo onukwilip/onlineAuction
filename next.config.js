@@ -10,6 +10,6 @@ const nextConfig = {
     API_DOMAIN: "https://auction-app-s9qv.onrender.com",
     // API_DOMAIN: "http://localhost:3000",
   },
-}; 
+};
 
 module.exports = nextConfig;

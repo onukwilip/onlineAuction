@@ -8,6 +8,13 @@ import { Button, Divider, Form, Icon, Input, Table } from "semantic-ui-react";
 import { useRouter } from "next/router";
 import { Products as allProducts } from "@/pages/shop";
 import Footer from "@/components/Footer";
+import useAjaxHook from "use-ajax-request";
+import axios from "axios";
+import CustomLoader from "@/components/Loader";
+import dummyUser from "@/assets/img/dummy.png";
+import dummyImage from "@/assets/img/dummy-product.png";
+import ErrorMessage from "@/components/Error";
+import ResponseError from "@/components/ResponseError";
 
 class Menu {
   constructor(name, tab, icon) {
@@ -47,13 +54,87 @@ class CardClass {
   }
 }
 
-const cards = [
-  new CardClass("Total bids created", "fas fa-tags", 0),
-  new CardClass("Total items bidded", "fas fa-gavel", 4),
-  new CardClass("Total bids won", "fa-solid fa-champagne-glasses", 1),
-];
-
 const User = () => {
+  const {
+    sendRequest: getUser,
+    data: user,
+    loading: loadingUser,
+    error: userError,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/user`,
+      method: "GET",
+    },
+  });
+
+  const {
+    sendRequest: getUserBids,
+    data: userBids,
+    loading: loadingUserBids,
+    error: userBidsError,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/user/bids`,
+      method: "GET",
+    },
+  });
+
+  const {
+    sendRequest: getUserBiddings,
+    data: userBiddings,
+    loading: loadingUserBiddings,
+    error: userBiddingsError,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/user/biddings`,
+      method: "GET",
+    },
+  });
+
+  const {
+    sendRequest: getUserWonBids,
+    data: userWonBids,
+    loading: loadingUserWonBids,
+    error: userWonBidsError,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/user/bids/won`,
+      method: "GET",
+    },
+  });
+
+  const cards = [
+    new CardClass(
+      "Total bids created",
+      "fas fa-tags",
+      userBids ? userBids?.length : 0
+    ),
+    new CardClass(
+      "Total items bidded",
+      "fas fa-gavel",
+      userBiddings ? userBiddings?.length : 0
+    ),
+    new CardClass(
+      "Total bids won",
+      "fa-solid fa-champagne-glasses",
+      userWonBids ? userWonBids?.length : 0
+    ),
+  ];
+
+  useEffect(() => {
+    getUser();
+    getUserBids();
+    getUserBiddings();
+  }, []);
+
+  if (loadingUser) {
+    return <CustomLoader />;
+  }
+
   return (
     <div className={css.user}>
       <div>
@@ -65,18 +146,18 @@ const User = () => {
             <div className={css.details}>
               <div className={css["img-container"]}>
                 <img
-                  src="https://images.unsplash.com/photo-1618641986557-1ecd230959aa?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8NXx8cHJvZmlsZXxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=60"
+                  src={user?.image ? user?.image : dummyUser?.src}
                   alt="profile"
                 />
               </div>
-              <em className={css.name}>Prince C. Onukwili</em>
-              <em className={css.date}>Joined on {new Date().toUTCString()}</em>
+              <em className={css.name}>{user?.name}</em>
+              {/* <em className={css.date}>Joined on {new Date().toUTCString()}</em> */}
               <ul className={css.others}>
                 <li>
-                  <Icon name="phone" /> +234 9017589571
+                  <Icon name="phone" /> {user?.phoneNumber}
                 </li>
                 <li>
-                  <Icon name="mail" /> onukwilip@gmail.com
+                  <Icon name="mail" /> {user?.email}
                 </li>
               </ul>
             </div>
@@ -104,8 +185,31 @@ const Products = () => {
   const [products, setProducts] = useState([]);
   const router = useRouter();
 
+  const {
+    sendRequest: getUserCreatedBids,
+    data: userCreatedBids,
+    loading: loadingUserCreatedBids,
+    error: userCreatedBidsError,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/user/bids`,
+      method: "GET",
+    },
+  });
+
+  const searchHandler = (value) => {
+    const foundBids = userCreatedBids?.filter((eachBid) =>
+      eachBid?.name?.toLowerCase()?.includes(value?.toLowerCase())
+    );
+    if (!Array.isArray(foundBids)) return;
+    setProducts(foundBids);
+  };
+
   useEffect(() => {
-    setProducts([...allProducts]);
+    getUserCreatedBids(({ data }) => {
+      setProducts(data);
+    });
   }, []);
 
   return (
@@ -113,7 +217,13 @@ const Products = () => {
       <h1>Created bids</h1>
       <Divider />
       <div className={css["search-container"]}>
-        <Input label="Search " placeholder="Search bids..." />
+        <Input
+          label="Search "
+          placeholder="Search bids..."
+          onChange={(e) => {
+            searchHandler(e.target.value);
+          }}
+        />
         <Button
           onClick={() => {
             router.push("/dashboard/?tab=new-bid", undefined, {
@@ -126,85 +236,189 @@ const Products = () => {
       </div>
       <br />
       <div className={css.data}>
-        <Table>
-          <Table.Header>
-            <Table.Row>
-              <Table.HeaderCell>
-                <em>Image</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell>
-                <em>Name</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell>
-                <em>Date created</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell>
-                <em>Starting bid</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell>
-                <em>Current bid</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell>
-                <em>Total bids</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell>
-                <em>Expiry date</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell></Table.HeaderCell>
-              <Table.HeaderCell></Table.HeaderCell>
-            </Table.Row>
-          </Table.Header>
-
-          <Table.Body>
-            {products.map((eachProduct, i) => (
-              <Table.Row key={i}>
-                <Table.Cell>
-                  <img src={eachProduct.image} alt="" />
-                </Table.Cell>
-                <Table.Cell>{eachProduct.name}</Table.Cell>
-                <Table.Cell>{new Date().toUTCString()}</Table.Cell>
-                <Table.Cell>
-                  <sup>$</sup>
-                  {eachProduct.startingBid}
-                </Table.Cell>
-                <Table.Cell>
-                  <sup>$</sup>
-                  {eachProduct.currentBid}
-                </Table.Cell>
-                <Table.Cell>{i + 5}</Table.Cell>
-                <Table.Cell>
-                  {new Date(eachProduct.expiry).toUTCString()}
-                </Table.Cell>
-                <Table.Cell>
-                  <Button
-                    className={css.edit}
-                    onClick={() => {
-                      router.push("/dashboard/?tab=edit-bid", undefined, {
-                        shallow: true,
-                      });
-                    }}
-                  >
-                    Edit
-                  </Button>
-                </Table.Cell>
-                <Table.Cell>
-                  <Button className={css.delete}>Delete</Button>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table>
+        {loadingUserCreatedBids ? (
+          <CustomLoader />
+        ) : (
+          <>
+            {products?.length < 1 ? (
+              <ResponseError>No bids available</ResponseError>
+            ) : (
+              <Table>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.HeaderCell>
+                      <em>Image</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Name</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Date created</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Starting bid</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Current bid</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Total bids</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Expiry date</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell></Table.HeaderCell>
+                    <Table.HeaderCell></Table.HeaderCell>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
+                  {products?.map((eachProduct, i) => (
+                    <Table.Row key={i}>
+                      <Table.Cell>
+                        <img
+                          src={
+                            eachProduct.image
+                              ? eachProduct.image
+                              : dummyImage.src
+                          }
+                          alt=""
+                        />
+                      </Table.Cell>
+                      <Table.Cell>{eachProduct.name}</Table.Cell>
+                      <Table.Cell>{new Date().toUTCString()}</Table.Cell>
+                      <Table.Cell>
+                        <sup>$</sup>
+                        {eachProduct.startingBid}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <sup>$</sup>
+                        {eachProduct.currentBid}
+                      </Table.Cell>
+                      <Table.Cell>{eachProduct?.bids?.length}</Table.Cell>
+                      <Table.Cell>
+                        {new Date(eachProduct.expiry).toUTCString()}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Button
+                          className={css.edit}
+                          onClick={() => {
+                            router.push("/dashboard/?tab=edit-bid", undefined, {
+                              shallow: true,
+                            });
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Button className={css.delete}>Delete</Button>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
 };
 
-const Bids = () => {
-  const [bids, setBids] = useState([]);
+const EachBid = ({ eachProduct, yourBid, callGetBiddings }) => {
   const router = useRouter();
 
+  const {
+    sendRequest: withdrawUserBid,
+    loading: withdrawingBid,
+    error: errorWithdrawingBid,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/bids/${eachProduct?._id}/withdraw`,
+      method: "DELETE",
+    },
+  });
+
+  return (
+    <>
+      <Table.Row key={eachProduct?._id}>
+        <Table.Cell>
+          <img
+            src={eachProduct?.image ? eachProduct?.image : dummyImage?.src}
+            alt=""
+          />
+        </Table.Cell>
+        <Table.Cell>{eachProduct?.name}</Table.Cell>
+        <Table.Cell>
+          <sup>$</sup>
+          {eachProduct?.startingBid}
+        </Table.Cell>
+        <Table.Cell>
+          <sup>$</sup>
+          {yourBid}
+        </Table.Cell>
+        <Table.Cell>
+          <sup>$</sup>
+          {eachProduct?.currentBid}
+        </Table.Cell>
+        <Table.Cell>{new Date(eachProduct?.expiry).toUTCString()}</Table.Cell>
+        <Table.Cell>
+          <Button
+            className={css.edit}
+            onClick={() => {
+              router.push(`/product/${eachProduct?._id}`);
+            }}
+          >
+            Edit bid
+          </Button>
+        </Table.Cell>
+        <Table.Cell>
+          <Button
+            className={css.delete}
+            onClick={() => {
+              withdrawUserBid((res) => callGetBiddings());
+            }}
+          >
+            {withdrawingBid ? "Loading..." : "Withdraw bid"}
+          </Button>
+        </Table.Cell>
+      </Table.Row>
+    </>
+  );
+};
+
+const Bids = () => {
+  const [bids, setBids] = useState([]);
+  const {
+    sendRequest: getUserBiddings,
+    data: userBiddings,
+    loading: loadingUserBiddings,
+    error: userBiddingsError,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/user/biddings`,
+      method: "GET",
+    },
+  });
+
+  const searchHandler = (value) => {
+    const foundBids = userBiddings?.filter((eachBid) =>
+      eachBid?.bid?.name?.toLowerCase()?.includes(value?.toLowerCase())
+    );
+    if (!Array.isArray(foundBids)) return;
+    setBids(foundBids);
+  };
+
+  const callGetUserBiddings = () => {
+    getUserBiddings(({ data }) => {
+      setBids(data);
+    });
+  };
+
   useEffect(() => {
-    setBids([...allProducts]);
+    callGetUserBiddings();
   }, []);
 
   return (
@@ -212,68 +426,62 @@ const Bids = () => {
       <h1>Bids</h1>
       <Divider />
       <div className={css["search-container"]}>
-        <Input label="Search " placeholder="Search bids..." />
+        <Input
+          label="Search "
+          placeholder="Search bids..."
+          onChange={(e) => {
+            searchHandler(e.target.value);
+          }}
+        />
       </div>
       <br />
       <div className={css.data}>
-        <Table>
-          <Table.Header>
-            <Table.Row>
-              <Table.HeaderCell>
-                <em>Image</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell>
-                <em>Name</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell>
-                <em>Amount bid</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell>
-                <em>Current bid</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell>
-                <em>Expiry date</em>
-              </Table.HeaderCell>
-              <Table.HeaderCell></Table.HeaderCell>
-              <Table.HeaderCell></Table.HeaderCell>
-            </Table.Row>
-          </Table.Header>
+        {loadingUserBiddings ? (
+          <CustomLoader />
+        ) : (
+          <>
+            {bids?.length < 1 ? (
+              <ResponseError>No bids available</ResponseError>
+            ) : (
+              <Table>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.HeaderCell>
+                      <em>Image</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Name</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Amount bid</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Your bid</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Highest bid</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Expiry date</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell></Table.HeaderCell>
+                    <Table.HeaderCell></Table.HeaderCell>
+                  </Table.Row>
+                </Table.Header>
 
-          <Table.Body>
-            {bids.map((eachProduct, i) => (
-              <Table.Row key={i}>
-                <Table.Cell>
-                  <img src={eachProduct.image} alt="" />
-                </Table.Cell>
-                <Table.Cell>{eachProduct.name}</Table.Cell>
-                <Table.Cell>
-                  <sup>$</sup>
-                  {eachProduct.startingBid}
-                </Table.Cell>
-                <Table.Cell>
-                  <sup>$</sup>
-                  {eachProduct.currentBid}
-                </Table.Cell>
-                <Table.Cell>
-                  {new Date(eachProduct.expiry).toUTCString()}
-                </Table.Cell>
-                <Table.Cell>
-                  <Button
-                    className={css.edit}
-                    onClick={() => {
-                      router.push(`/product/${i}`);
-                    }}
-                  >
-                    Edit bid
-                  </Button>
-                </Table.Cell>
-                <Table.Cell>
-                  <Button className={css.delete}>Withdraw bid</Button>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table>
+                <Table.Body>
+                  {bids.map(({ bid: eachProduct, amount: yourBid }, i) => (
+                    <EachBid
+                      eachProduct={eachProduct}
+                      yourBid={yourBid}
+                      callGetBiddings={callGetUserBiddings}
+                    />
+                  ))}
+                </Table.Body>
+              </Table>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

@@ -21,6 +21,7 @@ export default async function Bids(req, res) {
       expired: false,
       userId: auth?.data?.id,
       paid: false,
+      highestBidder: "",
       winner: {
         userId: "",
       },

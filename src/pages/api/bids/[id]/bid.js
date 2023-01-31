@@ -1,5 +1,6 @@
 import connect from "@/config/db";
 import Bid from "@/models/Bid";
+import Biddings from "@/models/Biddings";
 import { authMiddleware } from "@/utils";
 
 export default async function Bids(req, res) {
@@ -64,7 +65,13 @@ export default async function Bids(req, res) {
     //UPDATE BID IN DATABASE
     const updatedBid = await Bid.updateOne(
       { _id: query.id },
-      { $set: { bids: updatedBids, currentBid: highestBid?.amount } },
+      {
+        $set: {
+          bids: updatedBids,
+          currentBid: highestBid?.amount,
+          highestBidder: highestBid?.userId,
+        },
+      },
       { new: true }
     );
 
@@ -75,6 +82,33 @@ export default async function Bids(req, res) {
         message: "Something went wrong",
       });
     }
+
+    // GET ROW FROM BIDDINGS COLLECTION WHERE USERID = USER'S ID AND BIDID = BID ID
+    const getPrevBidding = await Biddings.findOne({
+      userId: auth?.data?.id,
+      bidId: query.id,
+    });
+
+    // IF EXISTS
+    if (getPrevBidding) {
+      // UPDATE THE COLLECTION SET AMOUNT = NEW AMOUNT, WHERE USERID = USER'S ID AND BIDID = BID'S ID
+      await Biddings.updateOne(
+        { userId: auth?.data?.id, bidId: query.id },
+        { $set: { amount: currentBid.amount } },
+        { new: true }
+      );
+    }
+    // ELSE
+    else {
+      // INSERT NEW RECORD
+      await Biddings.create({
+        userId: auth?.data?.id,
+        bidId: query.id,
+        datePosted: new Date(),
+        amount: currentBid.amount,
+      });
+    }
+
     //   ELSE RETURN 200
     return res.status(200).json(updatedBid);
   }
