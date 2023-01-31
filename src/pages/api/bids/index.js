@@ -13,20 +13,19 @@ export default async function Bids(req, res) {
 
     const bid = await Bid.create({
       name: body.name,
-      startingBid: body.startingBid,
-      currentBid: body.currentBid,
+      startingBid: +body.startingBid,
+      currentBid: 0,
+      highestBidder: "null",
       expiry: new Date(body.expiry),
       image: "",
       category: body.category,
+      description: body.description,
       expired: false,
       userId: auth?.data?.id,
       paid: false,
-      highestBidder: "",
       winner: {
         userId: "",
       },
-    }).catch((e) => {
-      return res.status(400).json({ message: "An error occured" });
     });
 
     if (!bid) {

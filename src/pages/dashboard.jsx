@@ -4,7 +4,15 @@ import React, { useEffect, useState } from "react";
 import css from "@/styles/dashboard/Dashboard.module.scss";
 import { HeadComponent } from ".";
 import Glassmorphism from "@/components/Glassmorphism";
-import { Button, Divider, Form, Icon, Input, Table } from "semantic-ui-react";
+import {
+  Button,
+  Divider,
+  Form,
+  Icon,
+  Input,
+  Message,
+  Table,
+} from "semantic-ui-react";
 import { useRouter } from "next/router";
 import { Products as allProducts } from "@/pages/shop";
 import Footer from "@/components/Footer";
@@ -15,6 +23,7 @@ import dummyUser from "@/assets/img/dummy.png";
 import dummyImage from "@/assets/img/dummy-product.png";
 import ErrorMessage from "@/components/Error";
 import ResponseError from "@/components/ResponseError";
+import { useForm, useInput } from "use-manage-form";
 
 class Menu {
   constructor(name, tab, icon) {
@@ -181,6 +190,72 @@ const User = () => {
   );
 };
 
+const EachProduct = ({ eachProduct, callGetUserCreatedBids }) => {
+  const router = useRouter();
+  const { sendRequest: deleteBid, loading: deletingBid } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/bids/${eachProduct?._id}`,
+      method: "DELETE",
+    },
+  });
+
+  const confirmDeleteBid = () => {
+    const confirm = window.confirm("Are you sure you want to delete this bid?");
+    if (confirm === true) {
+      deleteBid((res) => {
+        callGetUserCreatedBids();
+      });
+    }
+  };
+
+  return (
+    <>
+      <Table.Row key={eachProduct?._id}>
+        <Table.Cell>
+          <img
+            src={eachProduct.image ? eachProduct.image : dummyImage.src}
+            alt=""
+          />
+        </Table.Cell>
+        <Table.Cell>{eachProduct.name}</Table.Cell>
+        <Table.Cell>{new Date().toUTCString()}</Table.Cell>
+        <Table.Cell>
+          <sup>$</sup>
+          {eachProduct.startingBid}
+        </Table.Cell>
+        <Table.Cell>
+          <sup>$</sup>
+          {eachProduct.currentBid}
+        </Table.Cell>
+        <Table.Cell>{eachProduct?.bids?.length}</Table.Cell>
+        <Table.Cell>{new Date(eachProduct.expiry).toUTCString()}</Table.Cell>
+        <Table.Cell>
+          <Button
+            className={css.edit}
+            onClick={() => {
+              router.push(
+                `/dashboard/?tab=edit-bid&id=${eachProduct?._id}`,
+                undefined,
+                {
+                  shallow: true,
+                }
+              );
+            }}
+          >
+            Edit
+          </Button>
+        </Table.Cell>
+        <Table.Cell>
+          <Button className={css.delete} onClick={confirmDeleteBid}>
+            {deletingBid ? "Loading..." : "Delete"}
+          </Button>
+        </Table.Cell>
+      </Table.Row>
+    </>
+  );
+};
+
 const Products = () => {
   const [products, setProducts] = useState([]);
   const router = useRouter();
@@ -206,10 +281,14 @@ const Products = () => {
     setProducts(foundBids);
   };
 
-  useEffect(() => {
+  const callGetUserCreatedBids = () => {
     getUserCreatedBids(({ data }) => {
       setProducts(data);
     });
+  };
+
+  useEffect(() => {
+    callGetUserCreatedBids();
   }, []);
 
   return (
@@ -273,47 +352,10 @@ const Products = () => {
                 </Table.Header>
                 <Table.Body>
                   {products?.map((eachProduct, i) => (
-                    <Table.Row key={i}>
-                      <Table.Cell>
-                        <img
-                          src={
-                            eachProduct.image
-                              ? eachProduct.image
-                              : dummyImage.src
-                          }
-                          alt=""
-                        />
-                      </Table.Cell>
-                      <Table.Cell>{eachProduct.name}</Table.Cell>
-                      <Table.Cell>{new Date().toUTCString()}</Table.Cell>
-                      <Table.Cell>
-                        <sup>$</sup>
-                        {eachProduct.startingBid}
-                      </Table.Cell>
-                      <Table.Cell>
-                        <sup>$</sup>
-                        {eachProduct.currentBid}
-                      </Table.Cell>
-                      <Table.Cell>{eachProduct?.bids?.length}</Table.Cell>
-                      <Table.Cell>
-                        {new Date(eachProduct.expiry).toUTCString()}
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Button
-                          className={css.edit}
-                          onClick={() => {
-                            router.push("/dashboard/?tab=edit-bid", undefined, {
-                              shallow: true,
-                            });
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Button className={css.delete}>Delete</Button>
-                      </Table.Cell>
-                    </Table.Row>
+                    <EachProduct
+                      eachProduct={eachProduct}
+                      callGetUserCreatedBids={callGetUserCreatedBids}
+                    />
                   ))}
                 </Table.Body>
               </Table>
@@ -488,117 +530,761 @@ const Bids = () => {
 };
 
 const CreateBid = () => {
+  const [categories, setCategories] = useState([]);
+  const [postedSuccessfully, setPostedSuccessfully] = useState(false);
+  const {
+    value: name,
+    isValid: nameIsValid,
+    inputIsInValid: nameInputIsInValid,
+    onChange: onNameChange,
+    onBlur: onNameBlur,
+    reset: resetName,
+  } = useInput((/**@type String*/ value) => value?.trim() !== "");
+
+  const {
+    sendRequest: getCategories,
+    error: getCategoriesError,
+    loading: gettingCategories,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/categories`,
+      method: "GET",
+    },
+  });
+
+  const {
+    value: category,
+    isValid: categoryIsValid,
+    inputIsInValid: categoryInputIsInValid,
+    onChange: onCategoryChange,
+    onBlur: onCategoryBlur,
+    reset: resetCategory,
+  } = useInput((/**@type String*/ value) => {
+    return (
+      value?.trim() !== "" && categories.find((each) => each?.value === value)
+    );
+  });
+
+  const {
+    value: description,
+    isValid: descriptionIsValid,
+    inputIsInValid: descriptionInputIsInValid,
+    onChange: onDescriptionChange,
+    onBlur: onDescriptionBlur,
+    reset: resetDescription,
+  } = useInput((/**@type String*/ value) => value?.trim() !== "");
+
+  const {
+    value: startingBid,
+    isValid: startingBidIsValid,
+    inputIsInValid: startingBidInputIsInValid,
+    onChange: onStartingBidChange,
+    onBlur: onStartingBidBlur,
+    reset: resetStartingBid,
+  } = useInput((/**@type String*/ value) => value?.trim() !== "" && +value > 0);
+
+  const {
+    value: expiry,
+    isValid: expiryIsValid,
+    inputIsInValid: expiryInputIsInValid,
+    onChange: onExpiryChange,
+    onBlur: onExpiryBlur,
+    reset: resetExpiry,
+  } = useInput(
+    (/**@type String*/ value) =>
+      value?.trim() !== "" && new Date(value)?.getTime() > new Date().getTime()
+  );
+
+  const {
+    value: image,
+    isValid: imageIsValid,
+    inputIsInValid: imageInputIsInValid,
+    onChange: onImageChange,
+    onBlur: onImageBlur,
+    reset: resetImage,
+  } = useInput(() => true);
+
+  const { executeBlurHandlers, formIsValid, reset } = useForm({
+    blurHandlers: [
+      onNameBlur,
+      onDescriptionBlur,
+      onExpiryBlur,
+      onStartingBidBlur,
+      onCategoryBlur,
+    ],
+    resetHandlers: [
+      resetName,
+      resetDescription,
+      resetStartingBid,
+      resetExpiry,
+      resetImage,
+      resetCategory,
+    ],
+    validateOptions: () =>
+      nameIsValid &&
+      descriptionIsValid &&
+      startingBidIsValid &&
+      expiryIsValid &&
+      category,
+  });
+
+  const data = {
+    name: name,
+    startingBid: startingBid,
+    expiry: new Date(expiry),
+    image: "",
+    category: category,
+    description: description,
+  };
+
+  const {
+    sendRequest: postBid,
+    error: postBidError,
+    loading: postingBid,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/bids`,
+      method: "POST",
+      data,
+    },
+  });
+
+  const onSubmit = () => {
+    if (!formIsValid) {
+      return executeBlurHandlers();
+    }
+
+    postBid((res) => {
+      setPostedSuccessfully(true);
+
+      setTimeout(() => {
+        setPostedSuccessfully(false);
+      }, 1000 * 10);
+    });
+    console.log("SUBMITTED");
+    reset();
+  };
+
+  const onCategorySuccess = (res) => {
+    const { data } = res;
+    setCategories(
+      data?.map((eachCategory) => ({
+        key: eachCategory?._id,
+        value: eachCategory?.name,
+        text: eachCategory?.name,
+      }))
+    );
+  };
+
+  useEffect(() => {
+    getCategories(onCategorySuccess);
+  }, []);
+
   return (
     <div className={css["create-bid"]}>
       <h1>Create Bid</h1>
       <Divider />
-      <Form>
+      <Form onSubmit={onSubmit}>
+        {postedSuccessfully && (
+          <Message content="Bid created successfully" color="green" />
+        )}
         <Form.Input
           label="Name"
           placeholder="Enter product name..."
           className={css["form-input"]}
+          value={name}
+          onChange={(e) => {
+            onNameChange(e.target.value);
+          }}
+          onBlur={onNameBlur}
+          error={
+            nameInputIsInValid && {
+              content: "Input must not be empty",
+              pointing: "above",
+            }
+          }
         />
         <Form.TextArea
           label="Description"
           placeholder="Enter bid description..."
           type="textarea"
           className={css["form-input"]}
+          onChange={(e) => {
+            onDescriptionChange(e.target.value);
+          }}
+          onBlur={onDescriptionBlur}
+          value={description}
+          error={
+            descriptionInputIsInValid && {
+              content: "Input must not be empty",
+              pointing: "above",
+            }
+          }
         />
         <Form.Input
           label="Starting bid"
           placeholder="Enter starting bid..."
           type="number"
           className={css["form-input"]}
+          value={startingBid}
+          onChange={(e) => {
+            onStartingBidChange(e.target.value);
+          }}
+          onBlur={onStartingBidBlur}
+          error={
+            startingBidInputIsInValid && {
+              content: "Input must be greater than 0",
+              pointing: "above",
+            }
+          }
+        />
+        <Form.Select
+          label="Category"
+          placeholder="Enter category"
+          className={css["form-input"]}
+          value={category}
+          onChange={(e, other) => {
+            onCategoryChange(other.value);
+          }}
+          onBlur={onCategoryBlur}
+          error={
+            categoryInputIsInValid && {
+              content: "Input must be a valid category",
+              pointing: "above",
+            }
+          }
+          options={categories}
         />
         <Form.Input
           label="Expiry date"
           placeholder="Enter date at which bid will be closed..."
           type="date"
           className={css["form-input"]}
+          value={expiry}
+          onChange={(e) => {
+            onExpiryChange(e.target.value);
+          }}
+          onBlur={onExpiryBlur}
+          error={
+            expiryInputIsInValid && {
+              content: "Input must be greater than today",
+              pointing: "above",
+            }
+          }
         />
         <Form.Input
           label="Image"
           placeholder="Enter bid image..."
           type="file"
           className={css["form-input"]}
+          value={image}
+          onChange={(e) => {
+            onImageChange(e.target.files[0]);
+          }}
+          onBlur={onImageBlur}
         />
-        <Button className={css.submit}>Post</Button>
+        <Button className={css.submit} disabled={!formIsValid}>
+          {postingBid ? "Loading..." : "Post"}
+        </Button>
+        {postBidError && (
+          <ErrorMessage>{postBidError?.response?.data?.message}</ErrorMessage>
+        )}
       </Form>
     </div>
   );
 };
 
 const EditBid = () => {
+  const router = useRouter();
+  const { id } = router.query;
+  const [categories, setCategories] = useState([]);
+  const [postedSuccessfully, setPostedSuccessfully] = useState(false);
+  const {
+    value: name,
+    isValid: nameIsValid,
+    inputIsInValid: nameInputIsInValid,
+    onChange: onNameChange,
+    onBlur: onNameBlur,
+    reset: resetName,
+  } = useInput((/**@type String*/ value) => value?.trim() !== "");
+
+  const {
+    sendRequest: getCategories,
+    error: getCategoriesError,
+    loading: gettingCategories,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/categories`,
+      method: "GET",
+    },
+  });
+
+  const {
+    value: category,
+    isValid: categoryIsValid,
+    inputIsInValid: categoryInputIsInValid,
+    onChange: onCategoryChange,
+    onBlur: onCategoryBlur,
+    reset: resetCategory,
+  } = useInput((/**@type String*/ value) => {
+    return (
+      value?.trim() !== "" && categories.find((each) => each?.value === value)
+    );
+  });
+
+  const {
+    value: description,
+    isValid: descriptionIsValid,
+    inputIsInValid: descriptionInputIsInValid,
+    onChange: onDescriptionChange,
+    onBlur: onDescriptionBlur,
+    reset: resetDescription,
+  } = useInput((/**@type String*/ value) => value?.trim() !== "");
+
+  const {
+    value: startingBid,
+    isValid: startingBidIsValid,
+    inputIsInValid: startingBidInputIsInValid,
+    onChange: onStartingBidChange,
+    onBlur: onStartingBidBlur,
+    reset: resetStartingBid,
+  } = useInput((/**@type String*/ value) => value?.trim() !== "" && +value > 0);
+
+  const {
+    value: expiry,
+    isValid: expiryIsValid,
+    inputIsInValid: expiryInputIsInValid,
+    onChange: onExpiryChange,
+    onBlur: onExpiryBlur,
+    reset: resetExpiry,
+  } = useInput(
+    (/**@type String*/ value) =>
+      value?.trim() !== "" && new Date(value)?.getTime() > new Date().getTime()
+  );
+
+  const {
+    value: image,
+    isValid: imageIsValid,
+    inputIsInValid: imageInputIsInValid,
+    onChange: onImageChange,
+    onBlur: onImageBlur,
+    reset: resetImage,
+  } = useInput(() => true);
+
+  const { executeBlurHandlers, formIsValid, reset } = useForm({
+    blurHandlers: [
+      onNameBlur,
+      onDescriptionBlur,
+      onExpiryBlur,
+      onStartingBidBlur,
+      onCategoryBlur,
+    ],
+    resetHandlers: [
+      resetName,
+      resetDescription,
+      resetStartingBid,
+      resetExpiry,
+      resetImage,
+      resetCategory,
+    ],
+    validateOptions: () =>
+      nameIsValid &&
+      descriptionIsValid &&
+      startingBidIsValid &&
+      expiryIsValid &&
+      category,
+  });
+
+  const data = {
+    name: name,
+    startingBid: startingBid,
+    expiry: new Date(expiry),
+    image: "",
+    category: category,
+    description: description,
+  };
+
+  const {
+    sendRequest: updateBid,
+    error: updateBidError,
+    loading: updatingBid,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/bids/${id}`,
+      method: "PUT",
+      data,
+    },
+  });
+
+  const {
+    sendRequest: getBid,
+    error: getBidError,
+    loading: gettingBid,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/bids/${id}`,
+      method: "GET",
+      data,
+    },
+  });
+
+  const onSubmit = () => {
+    if (!formIsValid) {
+      return executeBlurHandlers();
+    }
+
+    updateBid((res) => {
+      setPostedSuccessfully(true);
+
+      setTimeout(() => {
+        setPostedSuccessfully(false);
+      }, 1000 * 10);
+    });
+    console.log("SUBMITTED");
+    reset();
+  };
+
+  const onCategorySuccess = (res) => {
+    const { data } = res;
+    setCategories(
+      data?.map((eachCategory) => ({
+        key: eachCategory?._id,
+        value: eachCategory?.name,
+        text: eachCategory?.name,
+      }))
+    );
+  };
+
+  const onGetBidSuccess = (res) => {
+    const { data } = res;
+
+    // console.log("BID DATA", data);
+    if (!data) {
+      return;
+    }
+
+    const date = {
+      day: new Date(data?.expiry)?.getDate(),
+      month: new Date(data?.expiry)?.getMonth() + 1,
+      year: new Date(data?.expiry)?.getFullYear(),
+    };
+
+    const formattedDate = `${date.year}-${
+      date.month?.toString()?.length === 1 ? "0" + date.month : date.month
+    }-${date.day?.toString()?.length === 1 ? "0" + date.day : date.day}`;
+
+    // console.log("FORMATTED DATE", formattedDate);
+
+    onNameChange(data?.name);
+    onDescriptionChange(data?.description);
+    onStartingBidChange(data?.startingBid?.toString());
+    onExpiryChange(formattedDate);
+    onCategoryChange(data?.category);
+    onImageChange(data?.image);
+  };
+
+  useEffect(() => {
+    getCategories(onCategorySuccess);
+    getBid(onGetBidSuccess);
+  }, []);
+
   return (
     <div className={css["create-bid"]}>
       <h1>Edit Bid</h1>
       <Divider />
-      <Form>
+      <Form onSubmit={onSubmit}>
+        {postedSuccessfully && (
+          <Message content="Bid updated successfully" color="green" />
+        )}
         <Form.Input
           label="Name"
           placeholder="Enter product name..."
           className={css["form-input"]}
+          value={name}
+          onChange={(e) => {
+            onNameChange(e.target.value);
+          }}
+          onBlur={onNameBlur}
+          error={
+            nameInputIsInValid && {
+              content: "Input must not be empty",
+              pointing: "above",
+            }
+          }
         />
         <Form.TextArea
           label="Description"
           placeholder="Enter bid description..."
           type="textarea"
           className={css["form-input"]}
+          onChange={(e) => {
+            onDescriptionChange(e.target.value);
+          }}
+          onBlur={onDescriptionBlur}
+          value={description}
+          error={
+            descriptionInputIsInValid && {
+              content: "Input must not be empty",
+              pointing: "above",
+            }
+          }
         />
         <Form.Input
           label="Starting bid"
           placeholder="Enter starting bid..."
           type="number"
           className={css["form-input"]}
+          value={startingBid}
+          onChange={(e) => {
+            onStartingBidChange(e.target.value);
+          }}
+          onBlur={onStartingBidBlur}
+          error={
+            startingBidInputIsInValid && {
+              content: "Input must be greater than 0",
+              pointing: "above",
+            }
+          }
+        />
+        <Form.Select
+          label="Category"
+          placeholder="Enter category"
+          className={css["form-input"]}
+          value={category}
+          onChange={(e, other) => {
+            onCategoryChange(other.value);
+          }}
+          onBlur={onCategoryBlur}
+          error={
+            categoryInputIsInValid && {
+              content: "Input must be a valid category",
+              pointing: "above",
+            }
+          }
+          options={categories}
         />
         <Form.Input
           label="Expiry date"
           placeholder="Enter date at which bid will be closed..."
           type="date"
           className={css["form-input"]}
+          value={expiry}
+          onChange={(e) => {
+            console.log("Expiry change", e?.target?.value);
+            onExpiryChange(e.target.value);
+          }}
+          onBlur={onExpiryBlur}
+          error={
+            expiryInputIsInValid && {
+              content: "Input must be greater than today",
+              pointing: "above",
+            }
+          }
         />
         <Form.Input
           label="Image"
           placeholder="Enter bid image..."
           type="file"
           className={css["form-input"]}
+          value={image}
+          onChange={(e) => {
+            onImageChange(e.target.files[0]);
+          }}
+          onBlur={onImageBlur}
         />
-        <Button className={css.submit}>Update</Button>
+        <Button className={css.submit} disabled={!formIsValid}>
+          {updatingBid ? "Loading..." : "Update"}
+        </Button>
+        {updateBidError && (
+          <ErrorMessage>{updateBidError?.response?.data?.message}</ErrorMessage>
+        )}
       </Form>
     </div>
   );
 };
 
 const EditProfile = () => {
+  const [postedSuccessfully, setPostedSuccessfully] = useState(false);
+
+  const {
+    value: name,
+    isValid: nameIsValid,
+    inputIsInValid: nameInputIsInValid,
+    onChange: onNameChange,
+    onBlur: onNameBlur,
+    reset: resetName,
+  } = useInput((/**@type String*/ value) => value?.trim() !== "");
+
+  const {
+    value: email,
+    isValid: emailIsValid,
+    inputIsInValid: emailInputIsInValid,
+    onChange: onEmailChange,
+    onBlur: onEmailBlur,
+    reset: resetEmail,
+  } = useInput(
+    (/**@type String*/ value) => value?.trim() !== "" && value?.includes("@")
+  );
+
+  const {
+    value: phoneNumber,
+    isValid: phoneNumberIsValid,
+    inputIsInValid: phoneNumberIsInValid,
+    onChange: onPhoneNumberChange,
+    onBlur: onPhoneNumberBlur,
+    reset: resetPhoneNumber,
+  } = useInput((/**@type String*/ value) => value?.trim() !== "" && +value > 0);
+
+  const {
+    value: image,
+    onChange: onImageChange,
+    onBlur: onImageBlur,
+    reset: resetImage,
+  } = useInput(() => true);
+
+  const { executeBlurHandlers, formIsValid, reset } = useForm({
+    blurHandlers: [onNameBlur, onEmailBlur, onPhoneNumberBlur],
+    resetHandlers: [resetName, resetEmail, resetPhoneNumber, resetImage],
+    validateOptions: () => nameIsValid && emailIsValid && phoneNumberIsValid,
+  });
+
+  const data = {
+    name: name,
+    email: email,
+    phoneNumber: phoneNumber,
+    image: "",
+  };
+
+  const {
+    sendRequest: updateUserInfo,
+    error: updateUserInfoError,
+    loading: updatingUserInfo,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/user`,
+      method: "PUT",
+      data,
+    },
+  });
+
+  const {
+    sendRequest: getUserInfo,
+    error: getUserInfoError,
+    loading: gettingUserInfo,
+  } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/user`,
+      method: "GET",
+    },
+  });
+
+  const onSubmit = () => {
+    updateUserInfo(() => {
+      setPostedSuccessfully(true);
+      setTimeout((res) => {
+        setPostedSuccessfully(false);
+      }, 1000 * 10);
+    });
+  };
+
+  const onGetUserInfoSuccess = (res) => {
+    const { data } = res;
+
+    onEmailChange(data?.email);
+    onPhoneNumberChange(data?.phoneNumber?.toString());
+    onNameChange(data?.name);
+    onImageChange(data?.image);
+  };
+
+  useEffect(() => {
+    getUserInfo(onGetUserInfoSuccess);
+  }, []);
+
   return (
     <div className={css["edit-profile"]}>
       <h1>Edit profile</h1>
       <Divider />
-      <Form>
+      <Form onSubmit={onSubmit}>
+        {postedSuccessfully && (
+          <Message content="User updated successfully" color="green" />
+        )}
         <Form.Input
           label="Name"
           placeholder="Enter full name..."
           className={css["form-input"]}
+          value={name}
+          onChange={(e) => {
+            onNameChange(e.target.value);
+          }}
+          onBlur={onNameBlur}
+          error={
+            nameInputIsInValid && {
+              content: "Input must not be empty",
+              pointing: "above",
+            }
+          }
         />
         <Form.Input
           label="Email address"
           placeholder="Enter email address..."
           type="email"
           className={css["form-input"]}
+          value={email}
+          onChange={(e) => {
+            onEmailChange(e.target.value);
+          }}
+          onBlur={onEmailBlur}
+          error={
+            emailInputIsInValid && {
+              content: "Input must be a valid email",
+              pointing: "above",
+            }
+          }
         />
         <Form.Input
           label="Phone number"
           placeholder="Enter phone number..."
           type="number"
           className={css["form-input"]}
+          value={phoneNumber}
+          onChange={(e) => {
+            onPhoneNumberChange(e.target.value);
+          }}
+          onBlur={onPhoneNumberBlur}
+          error={
+            phoneNumberIsInValid && {
+              content: "Input must not be empty",
+              pointing: "above",
+            }
+          }
         />
         <Form.Input
           label="Image"
           placeholder="Enter profile picture..."
           type="file"
           className={css["form-input"]}
+          value={image}
+          onChange={(e) => {
+            onImageChange(e.target.value);
+          }}
+          onBlur={onImageBlur}
         />
-        <Button className={css.submit}>Update</Button>
+        <Button
+          className={css.submit}
+          disabled={!formIsValid || updatingUserInfo}
+        >
+          {updatingUserInfo ? "Loading..." : "Update"}
+        </Button>
+        {updateUserInfoError && (
+          <ErrorMessage>{error?.response?.data?.message}</ErrorMessage>
+        )}
       </Form>
     </div>
   );
