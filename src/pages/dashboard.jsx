@@ -1118,7 +1118,7 @@ const EditBid = () => {
           placeholder="Enter bid image..."
           type="file"
           className={css["form-input"]}
-          value={image}
+          value={image?.filename}
           onChange={(e) => {
             onImageChange(e.target.files[0]);
           }}
@@ -1297,7 +1297,7 @@ const EditProfile = () => {
           placeholder="Enter profile picture..."
           type="file"
           className={css["form-input"]}
-          value={image}
+          value={image?.filename}
           onChange={(e) => {
             onImageChange(e.target.value);
           }}
