@@ -14,7 +14,7 @@ export const sendMail = async ({ from, to, subject, html, text }) => {
     port: 465,
     secure: true,
     auth: {
-      user: "onukwilip@gmail.com",
+      user: "gerydragos@gmail.com",
       pass: process.env.SMTP_APP_PASSWORD,
     },
   });

@@ -19,6 +19,9 @@ export default async function Bids(req, res) {
       return res.status(404).json({ message: "Bid not found" });
     }
 
+    if (bid?.expired === true)
+      return res.status(400).json({ message: "Bid has already expired" });
+
     if (new Date().getTime() < new Date(bid?.expiry)?.getTime()) {
       return res.status(400).json({ message: "Bid hasn't expired yet!" });
     }

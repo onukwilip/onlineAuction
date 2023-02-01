@@ -72,12 +72,12 @@ const Finished = () => {
       method: "POST",
       data: [
         {
-          $limit: 5,
-        },
-        {
           $match: {
             expired: true,
           },
+        },
+        {
+          $limit: 4,
         },
       ],
     },
@@ -90,7 +90,7 @@ const Finished = () => {
   return (
     <div className={css.finished}>
       <h1 className={css.title}>
-        <b>Finished</b> <em>Aunctions</em>
+        <b>Finished</b> <em>Auctions</em>
       </h1>
       <div className={css.auctions}>
         {loading ? (

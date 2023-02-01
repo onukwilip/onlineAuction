@@ -69,6 +69,8 @@ const MobilePreHeader = ({ user }) => {
 const Header = () => {
   const [showMobile, setShowMobile] = useState(false);
   const [showContactMenu, setShowContactMenu] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
   const {
     sendRequest: getUser,
     data: user,
@@ -86,71 +88,87 @@ const Header = () => {
     getUser();
   }, []);
   return (
-    <header className={css.header}>
-      {!showMobile && (
-        <div
-          className={css.hamburger}
-          onClick={() => {
-            setShowMobile((prev) => !prev);
-          }}
-        >
-          <Icon name={!showMobile ? "bars" : "arrow left"} />
-        </div>
+    <>
+      {showModal && (
+        <Modal show={setShowModal}>
+          <LoginSignup active={"login"} />
+        </Modal>
       )}
-      <div className={css.title}>
-        <img src={logo.src} alt="logo" />
-        <em>
-          online<b>Aunction</b>
-        </em>
-      </div>
-
-      <div className={css.elipsis}>
-        <Icon
-          name="fa-solid fa-ellipsis-vertical"
-          onClick={() => {
-            setShowContactMenu((prev) => !prev);
-          }}
-        />
-        {showContactMenu && (
-          <div className={`${css["contact-menu"]}`}>
-            <MobilePreHeader user={user} />
+      <header className={css.header}>
+        {!showMobile && (
+          <div
+            className={css.hamburger}
+            onClick={() => {
+              setShowMobile((prev) => !prev);
+            }}
+          >
+            <Icon name={!showMobile ? "bars" : "arrow left"} />
           </div>
         )}
-      </div>
-      <nav className={`${showMobile ? css.mobile : ""} ${css.menu}`}>
-        <ul>
-          <li>
-            <Link href="/">
-              <Icon name="home" /> Home
-            </Link>
-          </li>
+        <div className={css.title}>
+          <img src={logo.src} alt="logo" />
+          <em>
+            online<b>Auction</b>
+          </em>
+        </div>
 
-          <li>
-            <Link href="/shop">
-              <Icon name="cart" /> Shop
-            </Link>
-          </li>
-          {!userError && user && (
+        <div className={css.elipsis}>
+          <Icon
+            name="fa-solid fa-ellipsis-vertical"
+            onClick={() => {
+              setShowContactMenu((prev) => !prev);
+            }}
+          />
+          {showContactMenu && (
+            <div className={`${css["contact-menu"]}`}>
+              <MobilePreHeader user={user} />
+            </div>
+          )}
+        </div>
+        <nav className={`${showMobile ? css.mobile : ""} ${css.menu}`}>
+          <ul>
             <li>
-              <Link href="/dashboard">
-                <Icon name="user" /> Hey!{" "}
-                {user?.name?.split(" ")?.length > 0
-                  ? user?.name?.split(" ")[0]
-                  : user?.name?.substring(0, 5) + "..."}
+              <Link href="/">
+                <Icon name="home" /> Home
               </Link>
             </li>
-          )}
-        </ul>
-        <div
-          className={css.hamburger}
-          onClick={() => {
-            setShowMobile((prev) => !prev);
-          }}
-        >
-          <Icon name={"arrow left"} color="white" />
-        </div>
-      </nav>
-    </header>
+
+            <li>
+              <Link href="/shop">
+                <Icon name="cart" /> Shop
+              </Link>
+            </li>
+            <li>
+              {!userError && user ? (
+                <Link href="/dashboard">
+                  <Icon name="user" /> Hey!{" "}
+                  {user?.name?.split(" ")?.length > 0
+                    ? user?.name?.split(" ")[0]
+                    : user?.name?.substring(0, 5) + "..."}
+                </Link>
+              ) : (
+                <Link
+                  href="/"
+                  onClick={() => {
+                    setShowModal((prev) => !prev);
+                  }}
+                >
+                  <Icon name="user" /> Hey! Login
+                </Link>
+              )}
+            </li>
+          </ul>
+          <div
+            className={css.hamburger}
+            onClick={() => {
+              setShowMobile((prev) => !prev);
+            }}
+          >
+            <Icon name={"arrow left"} color="white" />
+          </div>
+        </nav>
+      </header>
+    </>
   );
 };
 

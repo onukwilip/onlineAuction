@@ -39,6 +39,7 @@ const menus = [
   new Menu("Bids", "bid", "fas fa-gavel"),
   new Menu("Edit profile", "edit", "fas fa-pencil"),
   new Menu("Post bid", "new-bid", "fas fa-tags"),
+  new Menu("Logout", "/", "fas  fa-right-from-bracket"),
 ];
 
 class Tab {
@@ -597,13 +598,21 @@ const CreateBid = () => {
   );
 
   const {
-    value: image,
+    value: images,
     isValid: imageIsValid,
     inputIsInValid: imageInputIsInValid,
     onChange: onImageChange,
     onBlur: onImageBlur,
     reset: resetImage,
-  } = useInput(() => true);
+  } = useInput((/**@type FileList */ images) => {
+    // console.log("File validation", images);
+    for (const /**@type File */ image of images) {
+      // console.log("Each image", image);
+      if (image.type === "image/png" || image.type === "image/jpg") continue;
+      else return false;
+    }
+    return true;
+  });
 
   const { executeBlurHandlers, formIsValid, reset } = useForm({
     blurHandlers: [
@@ -612,6 +621,7 @@ const CreateBid = () => {
       onExpiryBlur,
       onStartingBidBlur,
       onCategoryBlur,
+      onImageBlur,
     ],
     resetHandlers: [
       resetName,
@@ -626,17 +636,26 @@ const CreateBid = () => {
       descriptionIsValid &&
       startingBidIsValid &&
       expiryIsValid &&
-      category,
+      category &&
+      imageIsValid,
   });
 
-  const data = {
-    name: name,
-    startingBid: startingBid,
-    expiry: new Date(expiry),
-    image: "",
-    category: category,
-    description: description,
-  };
+  // const data = {
+  //   name: name,
+  //   startingBid: startingBid,
+  //   expiry: new Date(expiry),
+  //   image: "",
+  //   category: category,
+  //   description: description,
+  // };
+
+  const data = new FormData();
+  data.append("name", name);
+  data.append("startingBid", startingBid);
+  data.append("expiry", new Date(expiry));
+  data.append("images", images);
+  data.append("category", category);
+  data.append("description", description);
 
   const {
     sendRequest: postBid,
@@ -779,11 +798,19 @@ const CreateBid = () => {
           placeholder="Enter bid image..."
           type="file"
           className={css["form-input"]}
-          value={image}
+          value={images[0]?.fileName}
+          multiple={true}
           onChange={(e) => {
-            onImageChange(e.target.files[0]);
+            // console.log("File", e.target.files[0]);
+            onImageChange(e.target.files);
           }}
           onBlur={onImageBlur}
+          error={
+            imageInputIsInValid && {
+              content: "File must be a jpg or png file",
+              pointing: "above",
+            }
+          }
         />
         <Button className={css.submit} disabled={!formIsValid}>
           {postingBid ? "Loading..." : "Post"}
@@ -1301,6 +1328,30 @@ const Tabs = [
 
 const MenuComponent = () => {
   const router = useRouter();
+  const { sendRequest: logout, loading: loggingOut } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/logout`,
+      method: "POST",
+    },
+  });
+  const callLogout = () => {
+    const confirmLogout = window.confirm("Are you sure you want to logout");
+    if (confirmLogout) {
+      logout(() => {
+        router.replace("/");
+      });
+    }
+  };
+
+  const onClick = (menu) => {
+    if (menu?.tab === "/") {
+      return callLogout();
+    }
+    router.push(`/dashboard/?tab=${menu.tab}`, undefined, {
+      shallow: true,
+    });
+  };
 
   return (
     <Glassmorphism className={css.menu}>
@@ -1313,13 +1364,13 @@ const MenuComponent = () => {
           <li
             key={i}
             onClick={() => {
-              router.push(`/dashboard/?tab=${menu.tab}`, undefined, {
-                shallow: true,
-              });
+              onClick(menu);
             }}
           >
             <i className={menu.icon} />
-            <em>{menu.name}</em>
+            <em>
+              {menu.tab === "/" && loggingOut ? "Logging out..." : menu.name}
+            </em>
           </li>
         ))}
       </ul>

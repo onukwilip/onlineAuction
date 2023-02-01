@@ -308,6 +308,7 @@ const Signup = (props) => {
             value={confirmPassword}
             onChange={(e) => onConfirmPasswordChange(e?.target?.value)}
             onBlur={onConfirmPasswordBlur}
+            type="password"
             error={
               confirmPasswordInputIsInValid && {
                 content: "Input must not be empty and must be same as password",

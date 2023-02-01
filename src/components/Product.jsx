@@ -49,6 +49,7 @@ const product = {
 
 const ImageComponent = ({ product, image, getProduct }) => {
   const [expired, setExpired] = useState(product?.expired);
+
   const { sendRequest: sendExpired } = useAjaxHook({
     instance: axios,
     options: {
@@ -56,22 +57,46 @@ const ImageComponent = ({ product, image, getProduct }) => {
       method: "PUT",
     },
   });
+
   const onExpire = () => {
     sendExpired((res) => {
       setExpired(true);
       getProduct();
     });
   };
-  const { seconds, minutes, hours, days } = useTimer(
-    useMemo(
-      () => ({
-        expiryTimestamp: new Date(product?.expiry),
-        onExpire,
-        autoStart: true,
-      }),
-      [product]
-    )
-  );
+
+  const autoSendExpired = () => {
+    if (
+      new Date().getTime() >= new Date(product?.expired).getTime() &&
+      product?.expired === false &&
+      expired === false
+    ) {
+      onExpire();
+    }
+  };
+
+  // const { seconds, minutes, hours, days, start } = useTimer(
+  //   useMemo(
+  //     () => ({
+  //       expiryTimestamp: new Date(product?.expiry),
+  //       onExpire,
+  //       autoStart: true,
+  //     }),
+  //     [product]
+  //   )
+  // );
+
+  const { seconds, minutes, hours, days, start } = useTimer({
+    expiryTimestamp: new Date(product?.expiry),
+    onExpire,
+    autoStart: true,
+  });
+
+  useEffect(() => {
+    start();
+    autoSendExpired();
+  }, []);
+
   return (
     <>
       {!expired ? (
@@ -203,12 +228,18 @@ const ProductComponent = (props) => {
   };
 
   useEffect(() => {
-    callGetProduct();
+    if (!product) {
+      callGetProduct();
+    }
   }, [productId]);
 
   useEffect(() => {
-    getRecommended();
-    getUser();
+    if (!recommended) {
+      getRecommended();
+    }
+    if (!userData) {
+      getUser();
+    }
   }, [product]);
 
   return (
@@ -234,105 +265,107 @@ const ProductComponent = (props) => {
             <CustomLoader />
           ) : (
             <>
-              <div className={css["sub-body"]}>
-                {error?.response?.status === 404 ? (
-                  <ResponseError>Bid doesn't exist</ResponseError>
-                ) : (
-                  <>
-                    <div className={css.photos}>
-                      {product?.images?.map((image, i) => (
-                        <img
-                          src={image}
-                          alt="Photo"
-                          key={i}
-                          onClick={() => {
-                            setImage(image);
+              {error?.response?.status === 404 ? (
+                <ResponseError>Bid doesn't exist</ResponseError>
+              ) : !product ? (
+                <>
+                  <div style={{ width: "100%" }}>
+                    <ResponseError>Please reload the page</ResponseError>
+                  </div>
+                </>
+              ) : (
+                <div className={css["sub-body"]}>
+                  <div className={css.photos}>
+                    {product?.images?.map((image, i) => (
+                      <img
+                        src={image}
+                        alt="Photo"
+                        key={i}
+                        onClick={() => {
+                          setImage(image);
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div className={css.image}>
+                    <ImageComponent
+                      product={product}
+                      image={image}
+                      getProduct={callGetProduct}
+                    />
+                  </div>
+                  <div className={css["desc-container"]}>
+                    <h1>{product?.name}</h1>
+                    <p>{product?.description}</p>
+                    <Divider />
+                    <p>
+                      Starting bid:{" "}
+                      <b>
+                        <sup>$</sup>
+                        {product?.startingBid}
+                      </b>
+                    </p>
+                    <p>
+                      Highest bid:{" "}
+                      <b className={css["current-bid"]}>
+                        <sup>$</sup>
+                        {product?.currentBid}
+                      </b>
+                    </p>
+                    {!product?.expired ? (
+                      <Form onSubmit={submitHandler}>
+                        <Input
+                          className={css.bid}
+                          label="Set a bid"
+                          placeholder="E.g: $100"
+                          min={product?.startingBid}
+                          type="number"
+                          value={amount}
+                          onChange={(e) => {
+                            onAmountChange(e?.target?.value);
                           }}
                         />
-                      ))}
-                    </div>
-                    <div className={css.image}>
-                      <ImageComponent
-                        product={product}
-                        image={image}
-                        getProduct={callGetProduct}
-                      />
-                    </div>
-                    <div className={css["desc-container"]}>
-                      <h1>{product?.name}</h1>
-                      <p>{product?.description}</p>
-                      <Divider />
-                      <p>
-                        Starting bid:{" "}
-                        <b>
-                          <sup>$</sup>
-                          {product?.startingBid}
-                        </b>
-                      </p>
-                      <p>
-                        Highest bid:{" "}
-                        <b className={css["current-bid"]}>
-                          <sup>$</sup>
-                          {product?.currentBid}
-                        </b>
-                      </p>
-                      {!product?.expired ? (
-                        <Form onSubmit={submitHandler}>
-                          <Input
-                            className={css.bid}
-                            label="Set a bid"
-                            placeholder="E.g: $100"
-                            min={product?.startingBid}
-                            type="number"
-                            value={amount}
-                            onChange={(e) => {
-                              onAmountChange(e?.target?.value);
-                            }}
+                        <div className={css.action}>
+                          <Button disabled={postingBid}>
+                            {postingBid ? "Loading..." : "Send bid"}
+                          </Button>
+                        </div>
+                        {postError && postError?.response?.status !== 401 && (
+                          <ErrorMessage>
+                            {postError?.response?.data?.message}
+                          </ErrorMessage>
+                        )}
+                        {postedSuccessfully && (
+                          <Message
+                            color="green"
+                            content="Bid posted successfully"
                           />
-                          <div className={css.action}>
-                            <Button disabled={postingBid}>
-                              {postingBid ? "Loading..." : "Send bid"}
-                            </Button>
-                          </div>
-                          {postError && postError?.response?.status !== 401 && (
-                            <ErrorMessage>
-                              {postError?.response?.data?.message}
-                            </ErrorMessage>
-                          )}
-                          {postedSuccessfully && (
-                            <Message
-                              color="green"
-                              content="Bid posted successfully"
-                            />
-                          )}
-                        </Form>
-                      ) : (
-                        <>
-                          <ErrorMessage>This bid has expired</ErrorMessage>
-                        </>
-                      )}
-                      <Divider />
-                      {userData && (
-                        <Feed className={css.user}>
-                          <Feed.Event>
-                            <Feed.Label
-                              image={
-                                userData?.image
-                                  ? userData?.image
-                                  : dummyUser?.src
-                              }
-                            />
-                            <Feed.Content>
-                              <Feed.Summary>{userData?.name}</Feed.Summary>
-                              <Feed.Date content="Author" />
-                            </Feed.Content>
-                          </Feed.Event>
-                        </Feed>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
+                        )}
+                      </Form>
+                    ) : (
+                      <>
+                        <ErrorMessage>This bid has expired</ErrorMessage>
+                      </>
+                    )}
+                    <Divider />
+                    {userData && (
+                      <Feed className={css.user}>
+                        <Feed.Event>
+                          <Feed.Label
+                            image={
+                              userData?.image ? userData?.image : dummyUser?.src
+                            }
+                          />
+                          <Feed.Content>
+                            <Feed.Summary>{userData?.name}</Feed.Summary>
+                            <Feed.Date content="Author" />
+                          </Feed.Content>
+                        </Feed.Event>
+                      </Feed>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
 

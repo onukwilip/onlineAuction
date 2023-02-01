@@ -7,6 +7,7 @@ import ResponseError from "./ResponseError";
 import CustomLoader from "./Loader";
 import axios from "axios";
 import Bid from "@/components/Bid";
+import { useRouter } from "next/router";
 
 class CurrentAuctionClass {
   constructor(name, price, start, image, expiry) {
@@ -50,6 +51,7 @@ const CurrentAuctions = [
 ];
 
 const Current = () => {
+  const router = useRouter();
   const {
     sendRequest,
     data: bids,
@@ -62,7 +64,7 @@ const Current = () => {
       method: "POST",
       data: [
         {
-          $limit: 5,
+          $limit: 4,
         },
         {
           $match: {
@@ -80,7 +82,7 @@ const Current = () => {
   return (
     <div className={css["current"]}>
       <h1 className={css.title}>
-        <b>Current</b> <em>Aunctions</em>
+        <b>Current</b> <em>Auctions</em>
       </h1>
       <div className={css.auctions}>
         {loading ? (
@@ -95,7 +97,14 @@ const Current = () => {
         )}
       </div>
       <div className={css["actions"]}>
-        <Button icon labelPosition="right" className={css.more}>
+        <Button
+          icon
+          labelPosition="right"
+          className={css.more}
+          onClick={() => {
+            router.push("/shop");
+          }}
+        >
           View more
           <Icon name="right arrow" />
         </Button>

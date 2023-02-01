@@ -235,8 +235,15 @@ const Shop = () => {
   const { sendRequest, loading, error } = useAjaxHook({
     instance: axios,
     options: {
-      url: `${process.env.API_DOMAIN}/api/bids`,
-      method: "GET",
+      url: `${process.env.API_DOMAIN}/api/bids/query`,
+      method: "POST",
+      data: [
+        {
+          $match: {
+            expired: false,
+          },
+        },
+      ],
     },
   });
 

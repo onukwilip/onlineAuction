@@ -26,6 +26,16 @@ const Bid = ({ item }) => {
     sendExpired((res) => setExpired(true));
   };
 
+  const autoSendExpired = () => {
+    if (
+      new Date().getTime() >= new Date(item?.expired).getTime() &&
+      item?.expired === false &&
+      expired === false
+    ) {
+      onExpire();
+    }
+  };
+
   const { seconds, minutes, hours, days, start } = useTimer({
     expiryTimestamp: new Date(item?.expiry),
     onExpire,
@@ -33,13 +43,14 @@ const Bid = ({ item }) => {
 
   useEffect(() => {
     start();
+    autoSendExpired();
   }, []);
 
   if (expired) {
     return (
       <div className={css["finished-bid"]}>
         <Card>
-          <div className={css["img-container"]}>
+          <div className={css["img-container"]} onClick={redirect}>
             <div className={css.badge}>
               <em>Final price</em>
               <em>
@@ -52,7 +63,7 @@ const Bid = ({ item }) => {
             />
           </div>
           <Card.Content>
-            <Card.Header>{item?.name}</Card.Header>
+            <Card.Header onClick={redirect}>{item?.name}</Card.Header>
           </Card.Content>
         </Card>
       </div>
