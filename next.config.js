@@ -7,8 +7,8 @@ const nextConfig = {
     SMTP_APP_PASSWORD: "unsmbeadzjuzqtja",
     JWT_KEY: "13i4uuor8324",
     // API_DOMAIN: "https://aunction.vercel.app",
-    // API_DOMAIN: "https://auction-app-s9qv.onrender.com",
-    API_DOMAIN: "http://localhost:3000",
+    API_DOMAIN: "https://auction-app-s9qv.onrender.com",
+    // API_DOMAIN: "http://localhost:3000",
   },
 };
 
