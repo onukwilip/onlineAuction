@@ -1,63 +1,95 @@
 import connect from "@/config/db";
 import Bid from "@/models/Bid";
 import Biddings from "@/models/Biddings";
-import { authMiddleware } from "@/utils";
+import { authMiddleware, mapFunction, storage } from "@/utils";
+import multer from "multer";
+import nextConnect from "next-connect";
 
-export default async function Bids(req, res) {
-  connect();
-  const { body, query } = req;
-  if (req.method === "GET") {
-    const bid = await Bid.findOne({ _id: query.id });
+connect();
 
-    if (bid?.length < 1) {
-      return res.status(404).json({ message: "No bid available" });
-    }
-    return res.status(200).json(bid);
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+const upload = multer({
+  storage: storage,
+});
+
+const api = nextConnect({
+  onNoMatch: (req, res) =>
+    res.status(404).json({ message: `${req.method} method not allowed` }),
+});
+
+api.use(upload.array("images"));
+
+api.get(async (req, res) => {
+  const { query } = req;
+
+  const bid = await Bid.findOne({ _id: query.id });
+
+  if (bid?.length < 1) {
+    return res.status(404).json({ message: "No bid available" });
+  }
+  return res.status(200).json(bid);
+});
+
+api.put(async (req, res) => {
+  const { body, files, query } = req;
+
+  const auth = await authMiddleware({ req, res });
+  if (auth?.code !== 200) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
-  if (req.method === "PUT") {
-    const auth = await authMiddleware({ req, res });
-    if (auth?.code !== 200) {
-      return res.status(401).json({ message: "Unauthorized" });
+  const bid = await Bid.findOne({ _id: query.id });
+  if (bid?.userId !== auth?.data?.id)
+    return res.status(401).json({
+      message: "You are NOT aothorized to make changes to this bid",
+    });
+
+  const updatedBid = await Bid.updateOne(
+    { _id: query.id },
+    {
+      $set: {
+        ...body,
+        image: files?.length > 0 ? `/uploads/${files[0]?.filename}` : bid.image,
+        images: files?.length > 0 ? files?.map(mapFunction) : bid?.images,
+        expired: false,
+        paid: false,
+        "winner.userId": "",
+      },
     }
+  );
 
-    const bid = await Bid.findOne({ _id: query.id });
-    if (bid?.userId !== auth?.data?.id)
-      return res.status(401).json({
-        message: "You are NOT aothorized to make changes to this bid",
-      });
+  if (!updatedBid) {
+    return res.status(400).json({ message: "Something went wrong" });
+  }
+  return res.status(200).json(updatedBid);
+});
 
-    const updatedBid = await Bid.updateOne(
-      { _id: query.id },
-      { $set: { ...body, expired: false, paid: false, "winner.userId": "" } }
-    );
+api.delete(async (req, res) => {
+  const { query } = req;
 
-    if (!updatedBid) {
-      return res.status(400).json({ message: "Something went wrong" });
-    }
-    return res.status(200).json(updatedBid);
+  const auth = await authMiddleware({ req, res });
+  if (auth?.code !== 200) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
-  if (req.method === "DELETE") {
-    const auth = await authMiddleware({ req, res });
-    if (auth?.code !== 200) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+  const bid = await Bid.findOne({ _id: query.id });
+  if (bid?.userId !== auth?.data?.id)
+    return res.status(401).json({
+      message: "You are NOT authorized to make changes to this bid",
+    });
 
-    const bid = await Bid.findOne({ _id: query.id });
-    if (bid?.userId !== auth?.data?.id)
-      return res.status(401).json({
-        message: "You are NOT authorized to make changes to this bid",
-      });
+  const removedBid = await Bid.remove({ _id: query.id });
+  await Biddings.remove({ bidId: query.id });
 
-    const removedBid = await Bid.remove({ _id: query.id });
-    await Biddings.remove({ bidId: query.id });
-
-    if (!removedBid) {
-      return res.status(400).json({ message: "Something went wrong" });
-    }
-    return res.status(204).json({ message: "Bid deleted successfully" });
+  if (!removedBid) {
+    return res.status(400).json({ message: "Something went wrong" });
   }
+  return res.status(204).json({ message: "Bid deleted successfully" });
+});
 
-  return res.status(400).json({ message: "Method not allowed" });
-}
+export default api;

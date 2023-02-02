@@ -3,6 +3,7 @@ import nodeMailer from "nodemailer";
 import { getCookie, setCookie } from "cookies-next";
 import RefreshToken from "@/models/RefreshToken";
 import { v4 as uuidv4 } from "uuid";
+import multer from "multer";
 
 export const generateRandom = (min, max) => {
   return Math.floor(Math.random() * (max - min) + min);
@@ -194,4 +195,17 @@ export const authMiddleware = async ({ req, res }) => {
     req,
     res,
   });
+};
+
+export const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "./public/uploads");
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${new Date().getTime()}-${file.originalname}`);
+  },
+});
+
+export const mapFunction = (eachFile) => {
+  return `/uploads/${eachFile?.filename}`;
 };

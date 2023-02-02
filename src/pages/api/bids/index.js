@@ -1,9 +1,9 @@
 import connect from "@/config/db";
 import Bid from "@/models/Bid";
-import { authMiddleware } from "@/utils";
+import { authMiddleware, mapFunction } from "@/utils";
 import multer from "multer";
 import nextConnect from "next-connect";
-import path from "path";
+import { storage } from "../../../utils";
 
 connect();
 
@@ -12,15 +12,6 @@ export const config = {
     bodyParser: false, // Disallow body parsing, consume as stream
   },
 };
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "./public/uploads");
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${new Date().getTime()}-${file.originalname}`);
-  },
-});
 
 const upload = multer({
   storage,
@@ -44,10 +35,6 @@ api.post(async (req, res) => {
   if (auth?.code !== 200) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-
-  const mapFunction = (eachFile) => {
-    return `/uploads/${eachFile?.filename}`;
-  };
 
   const bid = await Bid.create({
     name: body.name,

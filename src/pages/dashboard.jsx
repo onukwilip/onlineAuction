@@ -640,20 +640,13 @@ const CreateBid = () => {
       imageIsValid,
   });
 
-  // const data = {
-  //   name: name,
-  //   startingBid: startingBid,
-  //   expiry: new Date(expiry),
-  //   image: "",
-  //   category: category,
-  //   description: description,
-  // };
-
   const data = new FormData();
   data.append("name", name);
   data.append("startingBid", startingBid);
   data.append("expiry", new Date(expiry));
-  data.append("images", images);
+  for (const image of images) {
+    data.append("images", image);
+  }
   data.append("category", category);
   data.append("description", description);
 
@@ -695,6 +688,23 @@ const CreateBid = () => {
         text: eachCategory?.name,
       }))
     );
+  };
+
+  const imageChangeValidation = (e) => {
+    let sizeSum = 0;
+    for (const file of e.target.files) {
+      const size = Math.round(file?.size / 1024);
+      if (size > 2048) {
+        onImageBlur();
+        return;
+      }
+      sizeSum += size;
+    }
+    if (sizeSum > 1024 * 10) {
+      onImageBlur();
+      return;
+    }
+    onImageChange(e.target.files);
   };
 
   useEffect(() => {
@@ -800,14 +810,12 @@ const CreateBid = () => {
           className={css["form-input"]}
           value={images[0]?.fileName}
           multiple={true}
-          onChange={(e) => {
-            // console.log("File", e.target.files[0]);
-            onImageChange(e.target.files);
-          }}
+          onChange={imageChangeValidation}
           onBlur={onImageBlur}
           error={
             imageInputIsInValid && {
-              content: "File must be a jpg or png file",
+              content:
+                "File must be a jpg or png fileFiles must be less than 2mb each, less than 10mb overall and must be in png or jpg format",
               pointing: "above",
             }
           }
@@ -858,7 +866,8 @@ const EditBid = () => {
     reset: resetCategory,
   } = useInput((/**@type String*/ value) => {
     return (
-      value?.trim() !== "" && categories.find((each) => each?.value === value)
+      value?.trim() !== "" &&
+      (categories.find((each) => each?.value === value) ? true : false)
     );
   });
 
@@ -893,13 +902,21 @@ const EditBid = () => {
   );
 
   const {
-    value: image,
+    value: images,
     isValid: imageIsValid,
     inputIsInValid: imageInputIsInValid,
     onChange: onImageChange,
     onBlur: onImageBlur,
     reset: resetImage,
-  } = useInput(() => true);
+  } = useInput((/**@type FileList */ images) => {
+    if (images.length < 1) return true;
+
+    for (const /**@type File */ image of images) {
+      if (image.type === "image/png" || image.type === "image/jpg") continue;
+      else return false;
+    }
+    return true;
+  });
 
   const { executeBlurHandlers, formIsValid, reset } = useForm({
     blurHandlers: [
@@ -908,6 +925,7 @@ const EditBid = () => {
       onExpiryBlur,
       onStartingBidBlur,
       onCategoryBlur,
+      onImageBlur,
     ],
     resetHandlers: [
       resetName,
@@ -916,23 +934,26 @@ const EditBid = () => {
       resetExpiry,
       resetImage,
       resetCategory,
+      resetImage,
     ],
     validateOptions: () =>
       nameIsValid &&
       descriptionIsValid &&
       startingBidIsValid &&
       expiryIsValid &&
-      category,
+      categoryIsValid &&
+      imageIsValid,
   });
 
-  const data = {
-    name: name,
-    startingBid: startingBid,
-    expiry: new Date(expiry),
-    image: "",
-    category: category,
-    description: description,
-  };
+  const data = new FormData();
+  data.append("name", name);
+  data.append("startingBid", startingBid);
+  data.append("expiry", new Date(expiry));
+  for (const image of images) {
+    data.append("images", image);
+  }
+  data.append("category", category);
+  data.append("description", description);
 
   const {
     sendRequest: updateBid,
@@ -972,6 +993,7 @@ const EditBid = () => {
         setPostedSuccessfully(false);
       }, 1000 * 10);
     });
+
     console.log("SUBMITTED");
     reset();
   };
@@ -1012,7 +1034,23 @@ const EditBid = () => {
     onStartingBidChange(data?.startingBid?.toString());
     onExpiryChange(formattedDate);
     onCategoryChange(data?.category);
-    onImageChange(data?.image);
+  };
+
+  const imageChangeValidation = (e) => {
+    let sizeSum = 0;
+    for (const file of e.target.files) {
+      const size = Math.round(file?.size / 1024);
+      if (size > 2048) {
+        onImageBlur();
+        return;
+      }
+      sizeSum += size;
+    }
+    if (sizeSum > 1024 * 10) {
+      onImageBlur();
+      return;
+    }
+    onImageChange(e.target.files);
   };
 
   useEffect(() => {
@@ -1118,11 +1156,16 @@ const EditBid = () => {
           placeholder="Enter bid image..."
           type="file"
           className={css["form-input"]}
-          value={image?.filename}
-          onChange={(e) => {
-            onImageChange(e.target.files[0]);
-          }}
+          value={images[0]?.filename}
+          multiple={true}
+          onChange={imageChangeValidation}
           onBlur={onImageBlur}
+          error={
+            imageInputIsInValid && {
+              content:
+                "Files must be less than 2mb each, less than 10mb overall and must be in png or jpg format",
+            }
+          }
         />
         <Button className={css.submit} disabled={!formIsValid}>
           {updatingBid ? "Loading..." : "Update"}
@@ -1172,20 +1215,26 @@ const EditProfile = () => {
     onChange: onImageChange,
     onBlur: onImageBlur,
     reset: resetImage,
-  } = useInput(() => true);
-
-  const { executeBlurHandlers, formIsValid, reset } = useForm({
-    blurHandlers: [onNameBlur, onEmailBlur, onPhoneNumberBlur],
-    resetHandlers: [resetName, resetEmail, resetPhoneNumber, resetImage],
-    validateOptions: () => nameIsValid && emailIsValid && phoneNumberIsValid,
+    inputIsInValid: imageInputIsInValid,
+    isValid: imageIsValid,
+  } = useInput((/**@type File */ image) => {
+    if (!image) return true;
+    if (image.type !== "image/png" && image.type !== "image/jpg") return false;
+    else return true;
   });
 
-  const data = {
-    name: name,
-    email: email,
-    phoneNumber: phoneNumber,
-    image: "",
-  };
+  const { executeBlurHandlers, formIsValid, reset } = useForm({
+    blurHandlers: [onNameBlur, onEmailBlur, onPhoneNumberBlur, onImageBlur],
+    resetHandlers: [resetName, resetEmail, resetPhoneNumber, resetImage],
+    validateOptions: () =>
+      nameIsValid && emailIsValid && phoneNumberIsValid && imageIsValid,
+  });
+
+  const data = new FormData();
+  data.append("name", name);
+  data.append("email", email);
+  data.append("phoneNumber", phoneNumber);
+  data.append("image", image);
 
   const {
     sendRequest: updateUserInfo,
@@ -1213,6 +1262,11 @@ const EditProfile = () => {
   });
 
   const onSubmit = () => {
+    if (!formIsValid) {
+      executeBlurHandlers();
+      return;
+    }
+
     updateUserInfo(() => {
       setPostedSuccessfully(true);
       setTimeout((res) => {
@@ -1227,7 +1281,17 @@ const EditProfile = () => {
     onEmailChange(data?.email);
     onPhoneNumberChange(data?.phoneNumber?.toString());
     onNameChange(data?.name);
-    onImageChange(data?.image);
+  };
+
+  const imageChangeValidation = (/**@type Event */ e) => {
+    const { files } = e.target;
+    const size = Math.round(files[0].size / 1024);
+    if (size > 2048) {
+      onImageBlur();
+      return false;
+    }
+
+    onImageChange(files[0]);
   };
 
   useEffect(() => {
@@ -1298,10 +1362,15 @@ const EditProfile = () => {
           type="file"
           className={css["form-input"]}
           value={image?.filename}
-          onChange={(e) => {
-            onImageChange(e.target.value);
-          }}
+          onChange={imageChangeValidation}
           onBlur={onImageBlur}
+          error={
+            imageInputIsInValid && {
+              content:
+                "File must be less than 2mb and must be in png or jpg format",
+              pointer: "above",
+            }
+          }
         />
         <Button
           className={css.submit}

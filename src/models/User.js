@@ -25,6 +25,7 @@ const userModel = mongoose.Schema({
     code: { type: Number, required: true },
     expiry: { type: Date, required: true },
   },
+  image: String,
 });
 
 module.exports = mongoose.models.Users || mongoose.model("Users", userModel);
