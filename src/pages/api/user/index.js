@@ -1,4 +1,4 @@
-import { authMiddleware, storage } from "@/utils";
+import { authMiddleware, storage, uploadImage } from "@/utils";
 import User from "@/models/User";
 import connect from "@/config/db";
 import nextConnect from "next-connect";
@@ -13,7 +13,7 @@ export const config = {
 };
 
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
 });
 
 const api = nextConnect({
@@ -44,9 +44,11 @@ api.put(async (req, res) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
+  const image = await uploadImage(file, process.env.CLOUDINARY_FOLDER);
+
   const user = await User.updateOne(
     { _id: auth?.data?.id },
-    { $set: { ...body, image: `uploads/${file?.filename}` } },
+    { $set: { ...body, image: image?.url } },
     { new: true }
   );
 

@@ -1,7 +1,12 @@
 import connect from "@/config/db";
 import Bid from "@/models/Bid";
 import Biddings from "@/models/Biddings";
-import { authMiddleware, mapFunction, storage } from "@/utils";
+import {
+  authMiddleware,
+  getUploadedImagesUrl,
+  mapFunction,
+  storage,
+} from "@/utils";
 import multer from "multer";
 import nextConnect from "next-connect";
 
@@ -14,7 +19,7 @@ export const config = {
 };
 
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
 });
 
 const api = nextConnect({
@@ -49,13 +54,15 @@ api.put(async (req, res) => {
       message: "You are NOT aothorized to make changes to this bid",
     });
 
+  const imagesUrls = await getUploadedImagesUrl(files);
+
   const updatedBid = await Bid.updateOne(
     { _id: query.id },
     {
       $set: {
         ...body,
-        image: files?.length > 0 ? `uploads/${files[0]?.filename}` : bid.image,
-        images: files?.length > 0 ? files?.map(mapFunction) : bid?.images,
+        image: files?.length > 0 ? imagesUrls[0] : bid.image,
+        images: files?.length > 0 ? imagesUrls?.map(mapFunction) : bid?.images,
         expired: false,
         paid: false,
         "winner.userId": "",

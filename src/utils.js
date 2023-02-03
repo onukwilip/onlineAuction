@@ -4,6 +4,9 @@ import { getCookie, setCookie } from "cookies-next";
 import RefreshToken from "@/models/RefreshToken";
 import { v4 as uuidv4 } from "uuid";
 import multer from "multer";
+import DataURIParser from "datauri/parser";
+import path from "path";
+import cloudinary from "./cloudinary";
 
 export const generateRandom = (min, max) => {
   return Math.floor(Math.random() * (max - min) + min);
@@ -206,6 +209,31 @@ export const storage = multer.diskStorage({
   },
 });
 
-export const mapFunction = (eachFile) => {
-  return `/uploads/${eachFile?.filename}`;
+export const mapFunction = (url) => {
+  // return `/uploads/${eachFile?.filename}`;
+  return url;
+};
+
+export const uploadImage = async (image, folder) => {
+  const parser = new DataURIParser();
+  const base64Image = parser.format(
+    path.extname(image.originalname).toString(),
+    image.buffer
+  );
+  return await cloudinary.uploader.upload(base64Image.content, folder, {
+    resource_type: "image",
+  });
+};
+
+export const getUploadedImagesUrl = async (files) => {
+  const imagesUrls = [];
+  for (const image of files) {
+    const uploadedImage = await uploadImage(
+      image,
+      process.env.CLOUDINARY_FOLDER
+    );
+
+    imagesUrls.push(uploadedImage?.url);
+  }
+  return imagesUrls;
 };

@@ -1,9 +1,13 @@
 import connect from "@/config/db";
 import Bid from "@/models/Bid";
-import { authMiddleware, mapFunction } from "@/utils";
+import {
+  authMiddleware,
+  getUploadedImagesUrl,
+  mapFunction,
+  uploadImage,
+} from "@/utils";
 import multer from "multer";
 import nextConnect from "next-connect";
-import { storage } from "../../../utils";
 
 connect();
 
@@ -14,7 +18,7 @@ export const config = {
 };
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
 });
 
 const api = nextConnect({
@@ -36,19 +40,21 @@ api.post(async (req, res) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
+  const imagesUrls = await getUploadedImagesUrl(files);
+
   const bid = await Bid.create({
     name: body.name,
     startingBid: +body.startingBid,
     currentBid: 0,
     highestBidder: "null",
     expiry: new Date(body.expiry),
-    image: `uploads/${files[0]?.filename}`,
+    image: imagesUrls[0],
     category: body.category,
     description: body.description,
     expired: false,
     userId: auth?.data?.id,
     paid: false,
-    images: files.map(mapFunction),
+    images: imagesUrls.map(mapFunction),
     winner: {
       userId: "",
     },
