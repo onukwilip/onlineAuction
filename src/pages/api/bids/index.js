@@ -42,7 +42,7 @@ api.post(async (req, res) => {
     currentBid: 0,
     highestBidder: "null",
     expiry: new Date(body.expiry),
-    image: `/uploads/${files[0]?.filename}`,
+    image: `uploads/${files[0]?.filename}`,
     category: body.category,
     description: body.description,
     expired: false,

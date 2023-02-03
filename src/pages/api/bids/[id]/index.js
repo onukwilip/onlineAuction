@@ -54,7 +54,7 @@ api.put(async (req, res) => {
     {
       $set: {
         ...body,
-        image: files?.length > 0 ? `/uploads/${files[0]?.filename}` : bid.image,
+        image: files?.length > 0 ? `uploads/${files[0]?.filename}` : bid.image,
         images: files?.length > 0 ? files?.map(mapFunction) : bid?.images,
         expired: false,
         paid: false,
