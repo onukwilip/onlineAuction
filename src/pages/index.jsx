@@ -16,7 +16,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const HeadComponent = ({ children }) => {
   return (
     <Head>
-      <title>onlineAunction</title>
+      <title>onlineAuction</title>
       <meta
         name="description"
         content="A web application for aunctioning goods and services"
