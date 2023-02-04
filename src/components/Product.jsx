@@ -75,17 +75,6 @@ const ImageComponent = ({ product, image, getProduct }) => {
     }
   };
 
-  // const { seconds, minutes, hours, days, start } = useTimer(
-  //   useMemo(
-  //     () => ({
-  //       expiryTimestamp: new Date(product?.expiry),
-  //       onExpire,
-  //       autoStart: true,
-  //     }),
-  //     [product]
-  //   )
-  // );
-
   const { seconds, minutes, hours, days, start } = useTimer({
     expiryTimestamp: new Date(product?.expiry),
     onExpire,
@@ -109,7 +98,7 @@ const ImageComponent = ({ product, image, getProduct }) => {
         </div>
       ) : (
         <>
-          <div className="badge">
+          <div className={css.badge}>
             <em>Final price</em>
             <em>
               <sup>$</sup> <em>{product?.price || 0}</em>
@@ -241,6 +230,15 @@ const ProductComponent = (props) => {
       getUser();
     }
   }, [product]);
+
+  if (!productId || !product)
+    return (
+      <>
+        <div style={{ width: "100vw", height: "80vh" }}>
+          <CustomLoader />
+        </div>
+      </>
+    );
 
   return (
     <>

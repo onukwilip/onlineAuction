@@ -84,7 +84,7 @@
             object-position: top;
             border-radius: 50%;
             border: 3px solid $pry-colour;
-          background-color: #fff;
+            background-color: #fff;
           }
         }
         em {
@@ -120,18 +120,10 @@
         width: 100%;
       }
       .card1 {
-        background: linear-gradient(
-          to right,
-          rgba($pry-colour, 0.7),
-          rgba(purple, 0.5)
-        );
+        background: linear-gradient(to right, rgba($pry-colour, 0.7), rgba(purple, 0.5));
       }
       .card2 {
-        background: linear-gradient(
-          to right,
-          rgba(blue, 0.5),
-          rgba(purple, 0.7)
-        );
+        background: linear-gradient(to right, rgba(blue, 0.5), rgba(purple, 0.7));
       }
       .heading {
         @include flex(flex-start, space-between, 0, row);
@@ -162,12 +154,9 @@
   }
 }
 .card {
+  padding: $spacing;
   border-radius: 5px;
-  background: linear-gradient(
-    to right,
-    rgba(purple, 0.5),
-    rgba($pry-colour, 0.7)
-  );
+  background: linear-gradient(to right, rgba(purple, 0.5), rgba($pry-colour, 0.7));
   color: white;
   max-width: 300px;
   min-height: 150px;
@@ -294,33 +283,6 @@
         display: block;
         font-size: 30px;
       }
-      // .menu {
-      //   .heading {
-      //     display: none;
-      //   }
-      //   height: auto;
-      //   & > div {
-      //     max-height: auto;
-      //     min-height: 50px;
-      //   }
-      //   .list {
-      //     @include flex(center, space-between, 0, row);
-      //     li {
-      //       padding: 0;
-      //       font-size: 23px;
-      //       em {
-      //         display: none;
-      //       }
-      //       &:hover {
-      //         background-color: transparent;
-      //       }
-      //       i:hover {
-      //         transform: scale(1.5);
-      //         color: white;
-      //       }
-      //     }
-      //   }
-      // }
     }
   }
 

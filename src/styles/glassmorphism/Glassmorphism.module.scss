@@ -1,6 +1,7 @@
 @import "../variables.scss";
 
 .glassmorphism {
+  display: block;
   padding: $spacing;
   background-color: $glass;
   border-radius: 10px;

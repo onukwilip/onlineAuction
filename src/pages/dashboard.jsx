@@ -48,13 +48,13 @@ class Tab {
   }
 }
 
-const Card = ({ children, className }) => {
+const CustomCard = ({ children, className }) => {
   return (
-    <Glassmorphism className={`${css.card} ${className}`}>
+    <div className={`${css.card} ${className}`}>
       <div className={css["vector-1"]}></div>
       <div className={css["vector-2"]}></div>
       {children}
-    </Glassmorphism>
+    </div>
   );
 };
 
@@ -177,13 +177,13 @@ const User = () => {
       <div className={css.statistics}>
         <div className={css["cards-container"]}>
           {cards.map((eachCard, i) => (
-            <Card className={css[`card${i}`]} key={i}>
+            <CustomCard className={css[`card${i}`]} key={i}>
               <div className={css.heading}>
                 <p>{eachCard.title}</p>
                 <i className={eachCard.icon} />
               </div>
               <div className={css.value}>{eachCard.value}</div>
-            </Card>
+            </CustomCard>
           ))}
         </div>
       </div>
@@ -231,6 +231,13 @@ const EachProduct = ({ eachProduct, callGetUserCreatedBids }) => {
         </Table.Cell>
         <Table.Cell>{eachProduct?.bids?.length}</Table.Cell>
         <Table.Cell>{new Date(eachProduct.expiry).toUTCString()}</Table.Cell>
+        <Table.Cell>
+          {eachProduct?.expired ? (
+            <em style={{ color: "orangered" }}>Expired</em>
+          ) : (
+            <em style={{ color: "green" }}>Active</em>
+          )}
+        </Table.Cell>
         <Table.Cell>
           <Button
             className={css.edit}
@@ -347,6 +354,9 @@ const Products = () => {
                     <Table.HeaderCell>
                       <em>Expiry date</em>
                     </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Status</em>
+                    </Table.HeaderCell>
                     <Table.HeaderCell></Table.HeaderCell>
                     <Table.HeaderCell></Table.HeaderCell>
                   </Table.Row>
@@ -406,6 +416,13 @@ const EachBid = ({ eachProduct, yourBid, callGetBiddings }) => {
           {eachProduct?.currentBid}
         </Table.Cell>
         <Table.Cell>{new Date(eachProduct?.expiry).toUTCString()}</Table.Cell>
+        <Table.Cell>
+          {eachProduct?.expired ? (
+            <em style={{ color: "orangered" }}>Expired</em>
+          ) : (
+            <em style={{ color: "green" }}>Active</em>
+          )}
+        </Table.Cell>
         <Table.Cell>
           <Button
             className={css.edit}
@@ -506,6 +523,9 @@ const Bids = () => {
                     </Table.HeaderCell>
                     <Table.HeaderCell>
                       <em>Expiry date</em>
+                    </Table.HeaderCell>
+                    <Table.HeaderCell>
+                      <em>Status</em>
                     </Table.HeaderCell>
                     <Table.HeaderCell></Table.HeaderCell>
                     <Table.HeaderCell></Table.HeaderCell>

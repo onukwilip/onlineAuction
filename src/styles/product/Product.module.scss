@@ -86,6 +86,31 @@
   }
 }
 
+.badge {
+  background-image: url("../../assets/img/badge.png");
+  background-repeat: no-repeat;
+  min-width: 150px;
+  height: 150px;
+  position: absolute;
+  right: 0;
+  @include flex(center, center, 5px, column);
+
+  & > em {
+    font-size: 18px;
+
+    &:last-of-type {
+      sup {
+        font-size: 20px;
+      }
+
+      em {
+        font-size: 30px;
+        font-weight: bold;
+      }
+    }
+  }
+}
+
 @media (max-width: 800px) {
   .pre-header {
     display: none;
