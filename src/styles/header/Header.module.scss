@@ -157,9 +157,8 @@
   }
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1160px) {
   .header {
-    // grid-template-columns: 0.2fr 1.6fr 0.2fr;
     @include flex(center, flex-start, 0, row);
     padding: 20px;
     div.title {
