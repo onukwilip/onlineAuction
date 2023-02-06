@@ -3,6 +3,7 @@ import User from "@/models/User";
 import connect from "@/config/db";
 import nextConnect from "next-connect";
 import multer from "multer";
+import cors from "cors";
 
 connect();
 
@@ -22,6 +23,8 @@ const api = nextConnect({
 });
 
 api.use(upload.single("image"));
+
+api.use(cors());
 
 api.get(async (req, res) => {
   const auth = await authMiddleware({ req, res });

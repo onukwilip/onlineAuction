@@ -1,6 +1,8 @@
 import connect from "@/config/db";
 import User from "@/models/User";
 import { fromBase64, generateRandom, sendMail, toBase64 } from "@/utils";
+import nextConnect from "next-connect";
+import cors from "cors";
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 connect();
@@ -1619,47 +1621,96 @@ export const sendAuth = async (id, body) => {
   return 404;
 };
 
-export default async function auth(req, res) {
+const api = nextConnect({
+  onNoMatch: (req, res) => {
+    return res
+      .status(400)
+      .json({ message: "Only GET and POST ruests are allowed" });
+  },
+});
+
+api.use(cors());
+
+api.post(async (req, res) => {
   const body = req.body;
-  if (req.method === "POST") {
-    const sent = await sendAuth(fromBase64(req.query?.id), body);
 
-    if (sent === 200) {
-      return res.status(200).json({ message: "Mail sent successfully" });
-    }
-    if (sent === 400) {
-      return res.status(400).json({ message: "Could not send mail to client" });
-    }
-    if (sent === 404) {
-      return res.status(404).json({ message: "User doesn't exist" });
-    }
-    return res.status(400).json({ message: "An error occured" });
+  const sent = await sendAuth(fromBase64(req.query?.id), body);
+
+  if (sent === 200) {
+    return res.status(200).json({ message: "Mail sent successfully" });
   }
-  if (req.method === "GET") {
-    const { code: base64Code, id: base64Id } = req.query;
-
-    const code = fromBase64(base64Code);
-    const id = fromBase64(base64Id);
-
-    const user = await User.findOne({ _id: id });
-    if (!user) {
-      return res.status(404).json({ message: "User does not exist" });
-    }
-    if (
-      +code === user?.auth?.code &&
-      new Date().getTime() < new Date(user?.auth?.expiry)?.getTime()
-    ) {
-      await User.updateOne(
-        { _id: id },
-        { $set: { "auth.code": 0, "auth.expiry": null, authenticated: true } }
-      );
-
-      return res.status(200).json({ message: "Email verified successfuly" });
-    }
-
-    return res.status(400).json({ message: "Invalid OTP" });
+  if (sent === 400) {
+    return res.status(400).json({ message: "Could not send mail to client" });
   }
-  return res
-    .status(400)
-    .json({ message: "Only GET and POST ruests are allowed" });
-}
+  if (sent === 404) {
+    return res.status(404).json({ message: "User doesn't exist" });
+  }
+  return res.status(400).json({ message: "An error occured" });
+});
+
+api.get(async (req, res) => {
+  const { code: base64Code, id: base64Id } = req.query;
+
+  const code = fromBase64(base64Code);
+  const id = fromBase64(base64Id);
+
+  const user = await User.findOne({ _id: id });
+  if (!user) {
+    return res.status(404).json({ message: "User does not exist" });
+  }
+  if (
+    +code === user?.auth?.code &&
+    new Date().getTime() < new Date(user?.auth?.expiry)?.getTime()
+  ) {
+    await User.updateOne(
+      { _id: id },
+      { $set: { "auth.code": 0, "auth.expiry": null, authenticated: true } }
+    );
+
+    return res.status(200).json({ message: "Email verified successfuly" });
+  }
+
+  return res.status(400).json({ message: "Invalid OTP" });
+});
+
+// export default async function auth(req, res) {
+//   const body = req.body;
+//   if (req.method === "POST") {
+//     const sent = await sendAuth(fromBase64(req.query?.id), body);
+//     if (sent === 200) {
+//       return res.status(200).json({ message: "Mail sent successfully" });
+//     }
+//     if (sent === 400) {
+//       return res.status(400).json({ message: "Could not send mail to client" });
+//     }
+//     if (sent === 404) {
+//       return res.status(404).json({ message: "User doesn't exist" });
+//     }
+//     return res.status(400).json({ message: "An error occured" });
+//   }
+//   if (req.method === "GET") {
+//     const { code: base64Code, id: base64Id } = req.query;
+//     const code = fromBase64(base64Code);
+//     const id = fromBase64(base64Id);
+//     const user = await User.findOne({ _id: id });
+//     if (!user) {
+//       return res.status(404).json({ message: "User does not exist" });
+//     }
+//     if (
+//       +code === user?.auth?.code &&
+//       new Date().getTime() < new Date(user?.auth?.expiry)?.getTime()
+//     ) {
+//       await User.updateOne(
+//         { _id: id },
+//         { $set: { "auth.code": 0, "auth.expiry": null, authenticated: true } }
+//       );
+//       return res.status(200).json({ message: "Email verified successfuly" });
+//     }
+//     return res.status(400).json({ message: "Invalid OTP" });
+//   }
+//   return res
+//     .status(400)
+//     .json({ message: "Only GET and POST ruests are allowed" });
+// }
+
+export default api;

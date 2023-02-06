@@ -1,15 +1,36 @@
 import { authMiddleware } from "@/utils";
 import Categories from "@/models/Categories";
 import connect from "@/config/db";
+import nextConnect from "next-connect";
+import cors from "cors";
 
-export default async function CategoriesEndpoint(req, res) {
-  connect();
+connect();
 
-  if (req.method === "GET") {
-    const user = await Categories.find();
+const api = nextConnect({
+  onNoMatch: (req, res) => {
+    return res.status(400).json({ message: `${req.method} not allowed` });
+  },
+});
 
-    if (!user) return res.status(404).json({ message: "No categories" });
+api.use(cors());
 
-    return res.status(200).json(user);
-  }
-}
+api.get(async (req, res) => {
+  const user = await Categories.find();
+
+  if (!user) return res.status(404).json({ message: "No categories" });
+
+  return res.status(200).json(user);
+});
+
+export default api;
+
+// export default async function CategoriesEndpoint(req, res) {
+
+//   if (req.method === "GET") {
+//     const user = await Categories.find();
+
+//     if (!user) return res.status(404).json({ message: "No categories" });
+
+//     return res.status(200).json(user);
+//   }
+// }

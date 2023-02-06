@@ -8,6 +8,7 @@ import {
 } from "@/utils";
 import multer from "multer";
 import nextConnect from "next-connect";
+import cors from "cors";
 
 connect();
 
@@ -31,6 +32,7 @@ const api = nextConnect({
 });
 
 api.use(upload.array("images"));
+api.use(cors());
 
 api.post(async (req, res) => {
   const { body, files } = req;

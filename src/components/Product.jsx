@@ -101,7 +101,7 @@ const ImageComponent = ({ product, image, getProduct }) => {
           <div className={css.badge}>
             <em>Final price</em>
             <em>
-              <sup>$</sup> <em>{product?.price || 0}</em>
+              <sup>$</sup> <em>{product?.currentBid || 0}</em>
             </em>
           </div>
         </>
