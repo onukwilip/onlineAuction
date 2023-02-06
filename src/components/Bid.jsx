@@ -54,7 +54,7 @@ const Bid = ({ item }) => {
             <div className={css.badge}>
               <em>Final price</em>
               <em>
-                <sup>$</sup> <em>{item?.price || 0}</em>
+                <sup>$</sup> <em>{item?.currentBid || 0}</em>
               </em>
             </div>
             <img
