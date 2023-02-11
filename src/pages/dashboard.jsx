@@ -220,7 +220,11 @@ const EachProduct = ({ eachProduct, callGetUserCreatedBids }) => {
           />
         </Table.Cell>
         <Table.Cell>{eachProduct.name}</Table.Cell>
-        <Table.Cell>{new Date().toUTCString()}</Table.Cell>
+        <Table.Cell>
+          {eachProduct.dateCreated
+            ? new Date(eachProduct.dateCreated).toUTCString()
+            : new Date().toUTCString()}
+        </Table.Cell>
         <Table.Cell>
           <sup>$</sup>
           {eachProduct.startingBid}

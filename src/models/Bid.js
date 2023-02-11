@@ -12,6 +12,7 @@ const BidModel = mongoose.Schema({
   images: Array,
   userId: { type: String, required: true },
   description: { type: String, required: true },
+  dateCreated: { type: Date, required: true },
   winner: {
     userId: String,
   },

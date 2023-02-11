@@ -23,8 +23,8 @@ const upload = multer({
 });
 
 const api = nextConnect({
-  onError: (req, res) => {
-    return res.status(500).json({ message: "An error occurred" });
+  onError: (err, req, res, next) => {
+    return res.status(500).json({ message: err.stack });
   },
   onNoMatch: (req, res) => {
     return res.status(500).json({ message: `${req.method} not allowed` });
@@ -57,6 +57,7 @@ api.post(async (req, res) => {
     userId: auth?.data?.id,
     paid: false,
     images: imagesUrls.map(mapFunction),
+    dateCreated: new Date(),
     winner: {
       userId: "",
     },
