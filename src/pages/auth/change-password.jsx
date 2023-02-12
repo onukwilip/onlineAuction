@@ -7,10 +7,13 @@ import css from "@/styles/auth/Auth.module.scss";
 import useAjaxHook from "use-ajax-request";
 import axios from "axios";
 import Link from "next/link";
-import { Button, Divider, Form } from "semantic-ui-react";
+import { Button, Divider, Form, Message } from "semantic-ui-react";
 import { useForm, useInput } from "use-manage-form";
+import { useRouter } from "next/router";
+import ResponseError from "@/components/ResponseError";
 
 const ChangePassword = (props) => {
+  const router = useRouter();
   const {
     value: verifyOTP,
     isValid: verifyOTPIsValid,
@@ -41,8 +44,23 @@ const ChangePassword = (props) => {
       verifyOTPIsValid && passwordIsValid && confirmPasswordIsValid,
   });
 
+  const { sendRequest, loading, error, data } = useAjaxHook({
+    instance: axios,
+    options: {
+      url: `${process.env.API_DOMAIN}/api/auth/change-password`,
+      method: "POST",
+      data: { otp: verifyOTP, password, confirmPassword },
+    },
+  });
+
+  const onSuccess = (res) => {
+    router.replace("/");
+  };
+
   const onSubmit = () => {
     if (!formIsValid) return executeBlurHandlers();
+
+    sendRequest(onSuccess);
   };
 
   return (
@@ -108,6 +126,11 @@ const ChangePassword = (props) => {
               <div className={css.actions}>
                 <Button className={css.send}>Change password</Button>
               </div>
+
+              {error && (
+                <ResponseError>{error?.response?.data?.message}</ResponseError>
+              )}
+              {data && <Message content={data?.message} color="green" />}
             </Form>
           </Glassmorphism>
         </div>

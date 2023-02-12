@@ -121,7 +121,7 @@ const Login = (props) => {
         </Form.Field>
         <Form.Field className={css.check}>
           <Checkbox label="Remember me" />
-          <Link href="">Forgotten password?</Link>
+          <Link href="/auth/password">Forgotten password?</Link>
         </Form.Field>
         {loading && <CustomLoader />}
         {error && <ErrorMessage>{error?.response?.data?.message}</ErrorMessage>}

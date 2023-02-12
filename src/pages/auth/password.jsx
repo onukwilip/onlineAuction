@@ -10,6 +10,7 @@ import axios from "axios";
 import { useRouter } from "next/router";
 import CustomLoader from "@/components/Loader";
 import { useInput } from "use-manage-form";
+import ResponseError from "@/components/ResponseError";
 
 const Auth = () => {
   const router = useRouter();
@@ -22,7 +23,7 @@ const Auth = () => {
     onBlur: onEmailBlur,
   } = useInput((value) => value?.includes("@"));
 
-  const { sendRequest, loading } = useAjaxHook({
+  const { sendRequest, loading, error } = useAjaxHook({
     instance: axios,
     options: {
       url: `${process.env.API_DOMAIN}/api/auth/password`,
@@ -80,6 +81,10 @@ const Auth = () => {
               </div>
             </Form>
             {loading && <CustomLoader />}
+            <br />
+            {error && (
+              <ResponseError>{error?.response?.data?.message}</ResponseError>
+            )}
           </Glassmorphism>
         </div>
       </div>
