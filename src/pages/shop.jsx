@@ -321,13 +321,11 @@ const Shop = () => {
                 <CustomLoader />
               ) : (
                 <>
-                  {error ||
-                    (bids?.length < 1 && (
-                      <ResponseError>No bids available</ResponseError>
-                    ))}
-                  {bids?.map((finished, i) => (
-                    <Bid item={finished} key={i} />
-                  ))}
+                  {!bids || bids?.length < 1 ? (
+                    <ResponseError>No bids available</ResponseError>
+                  ) : (
+                    bids?.map((finished, i) => <Bid item={finished} key={i} />)
+                  )}
                 </>
               )}
             </div>

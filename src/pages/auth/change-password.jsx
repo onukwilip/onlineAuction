@@ -126,7 +126,7 @@ const ChangePassword = (props) => {
               <div className={css.actions}>
                 <Button className={css.send}>Change password</Button>
               </div>
-
+              <br />
               {error && (
                 <ResponseError>{error?.response?.data?.message}</ResponseError>
               )}
