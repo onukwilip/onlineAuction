@@ -199,7 +199,7 @@ const Filter = ({ onFilter, setFilterLoading, getAll }) => {
       return getAll();
     }
 
-    // console.log("During submission", categoriesToSubmit);
+    console.log("During submission", categoriesToSubmit);
 
     filter(onSuccess, onError);
   };

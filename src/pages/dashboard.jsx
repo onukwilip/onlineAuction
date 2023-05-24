@@ -24,6 +24,7 @@ import dummyImage from "@/assets/img/dummy-product.png";
 import ErrorMessage from "@/components/Error";
 import ResponseError from "@/components/ResponseError";
 import { useForm, useInput } from "use-manage-form";
+import { authMiddleware } from "@/utils";
 
 class Menu {
   constructor(name, tab, icon) {
@@ -223,7 +224,7 @@ const EachProduct = ({ eachProduct, callGetUserCreatedBids }) => {
         <Table.Cell>
           {eachProduct.dateCreated
             ? new Date(eachProduct.dateCreated).toUTCString()
-            : new Date().toUTCString()}
+            : "-"}
         </Table.Cell>
         <Table.Cell>
           <sup>$</sup>
@@ -295,6 +296,17 @@ const Products = () => {
 
   const callGetUserCreatedBids = () => {
     getUserCreatedBids(({ data }) => {
+      data?.sort((a, b) => {
+        if (isNaN(Number(a?.dateCreated))) return -1;
+        if (isNaN(Number(b?.dateCreated))) return 1;
+
+        const result =
+          new Date(a?.dateCreated)?.getTime() -
+          new Date(b?.dateCreated)?.getTime();
+
+        return result;
+      });
+
       setProducts(data);
     });
   };
@@ -477,6 +489,17 @@ const Bids = () => {
 
   const callGetUserBiddings = () => {
     getUserBiddings(({ data }) => {
+      data?.sort((a, b) => {
+        if (isNaN(Number(a?.datePosted))) return -1;
+        if (isNaN(Number(b?.datePosted))) return 1;
+
+        const result =
+          new Date(a?.datePosted)?.getTime() -
+          new Date(b?.datePosted)?.getTime();
+
+        return result;
+      });
+
       setBids(data);
     });
   };
@@ -1508,3 +1531,19 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+export const getServerSideProps = async ({ req, res }) => {
+  const auth = await authMiddleware({ req, res });
+  if (auth?.code !== 200) {
+    return {
+      redirect: {
+        destination: "/",
+        permanent: true,
+      },
+    };
+  }
+
+  return {
+    props: {},
+  };
+};

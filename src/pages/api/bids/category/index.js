@@ -22,11 +22,12 @@ api.post(async (req, res) => {
       .json({ message: "Body must contain an array of at least one object" });
 
   const bids = await Bid.find({ $or: body });
+  const filteredBids = bids?.filter((bid) => bid?.expired === false);
 
-  if (bids?.length < 1) {
+  if (filteredBids?.length < 1) {
     return res.status(404).json({ message: "No bid available" });
   }
-  return res.status(200).json(bids);
+  return res.status(200).json(filteredBids);
 });
 
 export default api;

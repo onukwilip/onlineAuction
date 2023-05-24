@@ -12,7 +12,7 @@ const nextConfig = {
     CLOUDINARY_FOLDER: "gereadragos-auction-app",
     // API_DOMAIN: "https://aunction.vercel.app",
     API_DOMAIN: "https://auction-app-s9qv.onrender.com",
-    // API_DOMAIN: "http://localhost:3000",
+    // API_DOMAIN: "http://localhost:3001",
   },
 };
 

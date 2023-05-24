@@ -64,12 +64,12 @@ const Current = () => {
       method: "POST",
       data: [
         {
-          $limit: 4,
-        },
-        {
           $match: {
             expired: false,
           },
+        },
+        {
+          $limit: 4,
         },
       ],
     },
