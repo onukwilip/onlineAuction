@@ -1,11 +1,12 @@
-import { authMiddleware } from "@/utils";
+import { authMiddleware, getKey } from "@/utils";
 import Categories from "@/models/Categories";
 import connect from "@/config/db";
 import nextConnect from "next-connect";
 import cors from "cors";
-import client from "@/config/redis-config";
+import connectRedis from "@/config/redis-config";
 
 connect();
+const client = connectRedis();
 
 const api = nextConnect({
   onNoMatch: (req, res) => {
@@ -16,11 +17,19 @@ const api = nextConnect({
 api.use(cors());
 
 api.get(async (req, res) => {
-  const user = await Categories.find();
+  const key = getKey(req);
+  const cachedCategories = await client.get(key);
 
-  if (!user) return res.status(404).json({ message: "No categories" });
+  if (cachedCategories)
+    return res.status(200).json(JSON.parse(cachedCategories));
 
-  return res.status(200).json(user);
+  const categories = await Categories.find();
+
+  if (!categories) return res.status(404).json({ message: "No categories" });
+
+  client.set(key, JSON.stringify(categories));
+
+  return res.status(200).json(categories);
 });
 
 export default api;

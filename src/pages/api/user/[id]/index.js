@@ -1,10 +1,12 @@
-import { authMiddleware } from "@/utils";
+import { authMiddleware, getKey } from "@/utils";
 import User from "@/models/User";
 import connect from "@/config/db";
 import nextConnect from "next-connect";
 import cors from "cors";
+import redisConfig from "@/config/redis-config";
 
 connect();
+const client = redisConfig();
 
 const api = nextConnect({
   onNoMatch: (req, res) => {
@@ -20,10 +22,17 @@ api.get(async (req, res) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
   const { query } = req;
+
+  const key = getKey(req, query?.id);
+  const cachedUser = await client.get(key);
+
+  if (cachedUser) return res.status(200).json(JSON.parse(cachedUser));
+
   const user = await User.findOne({ _id: query?.id });
 
   if (!user) return res.status(404).json({ message: "User not found" });
 
+  await client.setEx(key, 1000 * 10, JSON.stringify(user));
   return res.status(200).json(user);
 });
 

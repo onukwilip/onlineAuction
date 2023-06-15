@@ -1,7 +1,12 @@
 import { createClient } from "redis";
 
-const client = createClient();
-client.on("error", (e) => console.log("An error occured ", e));
-client.connect();
+export default function () {
+  const client = createClient();
+  client.on("error", (e) => console.log("An error occured ", e));
+  client.on("connection", () =>
+    console.log("Connected to redis server successfully")
+  );
+  client.connect();
 
-export default client;
+  return client;
+}

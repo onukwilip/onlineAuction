@@ -233,6 +233,9 @@ export const getUploadedImagesUrl = async (files) => {
   return imagesUrls;
 };
 
+export const getKey = (req, ...args) =>
+  `${req?.url}_${req?.method}_${args?.join("_")}`;
+
 export const passwordOTPTemplate = (
   code,
   to

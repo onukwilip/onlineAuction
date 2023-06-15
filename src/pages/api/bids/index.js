@@ -2,6 +2,7 @@ import connect from "@/config/db";
 import Bid from "@/models/Bid";
 import {
   authMiddleware,
+  getKey,
   getUploadedImagesUrl,
   mapFunction,
   uploadImage,
@@ -9,8 +10,10 @@ import {
 import multer from "multer";
 import nextConnect from "next-connect";
 import cors from "cors";
+import redisConfig from "@/config/redis-config";
 
 connect();
+const redisClient = redisConfig();
 
 export const config = {
   api: {
@@ -66,10 +69,16 @@ api.post(async (req, res) => {
   if (!bid) {
     return res.status(400).json({ message: "An error occured" });
   }
+
   return res.status(200).json(bid);
 });
 
 api.get(async (req, res) => {
+  const key = getKey(req);
+  const cachedBids = await redisClient.get(key);
+
+  if (cachedBids) return res.status(200).json(JSON.parse(cachedBids));
+
   const bids = await Bid.find().catch((e) => {
     return res.status(400).json({ message: "An error occured" });
   });
@@ -77,6 +86,8 @@ api.get(async (req, res) => {
   if (bids?.length < 1) {
     return res.status(404).json({ message: "No bid's available" });
   }
+
+  await redisClient.setEx(key, 1000 * 15, JSON.stringify(bids));
   return res.status(200).json(bids);
 });
 
