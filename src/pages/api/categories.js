@@ -3,6 +3,7 @@ import Categories from "@/models/Categories";
 import connect from "@/config/db";
 import nextConnect from "next-connect";
 import cors from "cors";
+import client from "@/config/redis-config";
 
 connect();
 
