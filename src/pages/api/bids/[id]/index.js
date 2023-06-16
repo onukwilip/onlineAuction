@@ -10,8 +10,10 @@ import {
 import multer from "multer";
 import nextConnect from "next-connect";
 import cors from "cors";
+import redisConfig from "@/config/redis-config";
 
 connect();
+const client = redisConfig();
 
 export const config = {
   api: {
@@ -33,12 +35,17 @@ api.use(cors());
 
 api.get(async (req, res) => {
   const { query } = req;
+  const key = getKey(req, query.id);
+  const cachedBid = await client.get(key);
+  if (cachedBid) return res.status(200).json(JSON.parse(cachedBid));
 
   const bid = await Bid.findOne({ _id: query.id });
 
   if (bid?.length < 1) {
     return res.status(404).json({ message: "No bid available" });
   }
+
+  await client.setEx(key, 1000 * 15, JSON.stringify(bid));
   return res.status(200).json(bid);
 });
 
