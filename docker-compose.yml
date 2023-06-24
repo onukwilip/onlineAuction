@@ -6,7 +6,7 @@ services:
     container_name: gereagragos-fiverr-project
     ports:
       - 3000:3000
-      - 6379:6379
+      # - 6379:6379
     environment:
       MONGODB_URI: mongodb+srv://gery:dregos@microservices-cluster.xphnago.mongodb.net/auction-db?retryWrites=true&w=majority
       SMTP_APP_PASSWORD: pglolyhpvcqobkib
