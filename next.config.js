@@ -5,8 +5,6 @@ const nextConfig = {
     MONGODB_URI:
       "mongodb+srv://gery:dregos@microservices-cluster.xphnago.mongodb.net/auction-db?retryWrites=true&w=majority",
     SMTP_APP_PASSWORD: "unsmbeadzjuzqtja",
-    REDIS_URL:
-      "rediss://red-ci6ck3enqql3q38h1a1g:eL25cx5OJCX2GwTVihLDxCqeLMMjZbv0@oregon-redis.render.com:6379",
     JWT_KEY: "13i4uuor8324",
     CLOUDINARY_NAME: "dcw8gj4c1",
     CLOUDINARY_KEY: "431845878597357",
