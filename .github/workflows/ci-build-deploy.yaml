@@ -1,0 +1,56 @@
+name: CI/CD Pipeline to GCP Run
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Setup project, Authorize GitHub actions to GCP and Docker Hub, and deploy
+    env:
+      SHA: ${{github.sha}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Authenticate for GCP
+        id: gcp-auth
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+
+      - name: Authenticate for Docker Hub
+        id: docker-auth
+        env:
+          D_USER: ${{secrets.DOCKER_USER}}
+          D_PASS: ${{secrets.DOCKER_PASSWORD}}
+        run: |
+          docker login -u $D_USER -p $D_PASS
+
+      - name: Build and tag Image
+        run: |
+          docker build -t prince2006/online-auction:$SHA .
+
+      - name: Push the imag to Docker hub
+        run: |
+          docker push prince2006/online-auction:$SHA
+
+      - name: Deploy to GCP run
+        run: |
+          gcloud run deploy online-auction \
+          --region us-east1 \
+          --image prince2006/online-auction:$SHA \
+          --platform "managed" \
+          --allow-unauthenticated \
+          --set-env-vars MONGODB_URI='${{secrets.MONGODB_URI}}' \
+          --set-env-vars SMTP_APP_PASSWORD='${{secrets.SMTP_APP_PASSWORD}}' \
+          --set-env-vars JWT_KEY='${{secrets.JWT_KEY}}' \
+          --set-env-vars CLOUDINARY_NAME='${{secrets.CLOUDINARY_NAME}}' \
+          --set-env-vars CLOUDINARY_KEY='${{secrets.CLOUDINARY_KEY}}' \
+          --set-env-vars CLOUDINARY_SECRET='${{secrets.CLOUDINARY_SECRET}}' \
+          --set-env-vars CLOUDINARY_FOLDER='${{secrets.CLOUDINARY_FOLDER}}' \
+          --set-env-vars REDIS_URL='${{secrets.REDIS_URL}}'
