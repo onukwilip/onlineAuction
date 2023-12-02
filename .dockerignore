@@ -1,0 +1,6 @@
+Dockerfile
+/node_modules
+.vscode
+goserver.*
+microservices-architechture.*
+.env*
