@@ -45,4 +45,12 @@ jobs:
           --region us-east1 \
           --image prince2006/online-auction:$SHA \
           --platform "managed" \
+          --set-env-vars MONGODB_URI=${{secrets.MONGODB_URI}},\
+          SMTP_APP_PASSWORD=${{secrets.SMTP_APP_PASSWORD}},\
+          JWT_KEY=${{secrets.JWT_KEY}},\
+          CLOUDINARY_NAME=${{secrets.CLOUDINARY_NAME}},\
+          CLOUDINARY_KEY=${{secrets.CLOUDINARY_KEY}},\
+          CLOUDINARY_SECRET=${{secrets.CLOUDINARY_SECRET}},\
+          CLOUDINARY_FOLDER=${{secrets.CLOUDINARY_FOLDER}},
+          REDIS_URL=${{secrets.REDIS_URL}},
           --quiet
