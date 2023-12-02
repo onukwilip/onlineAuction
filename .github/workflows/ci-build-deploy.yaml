@@ -46,4 +46,11 @@ jobs:
           --image prince2006/online-auction:$SHA \
           --platform "managed" \
           --allow-unauthenticated \
-          --set-env-vars MONGODB_URI=${{secrets.MONGODB_URI}},SMTP_APP_PASSWORD=${{secrets.SMTP_APP_PASSWORD}},JWT_KEY=${{secrets.JWT_KEY}},CLOUDINARY_NAME=${{secrets.CLOUDINARY_NAME}},CLOUDINARY_KEY=${{secrets.CLOUDINARY_KEY}},CLOUDINARY_SECRET=${{secrets.CLOUDINARY_SECRET}},CLOUDINARY_FOLDER=${{secrets.CLOUDINARY_FOLDER}},REDIS_URL=${{secrets.REDIS_URL}}
+          --set-env-vars MONGODB_URI=${{secrets.MONGODB_URI}} \
+          --set-env-vars SMTP_APP_PASSWORD=${{secrets.SMTP_APP_PASSWORD}} \
+          --set-env-vars JWT_KEY=${{secrets.JWT_KEY}} \
+          --set-env-vars CLOUDINARY_NAME=${{secrets.CLOUDINARY_NAME}} \
+          --set-env-vars CLOUDINARY_KEY=${{secrets.CLOUDINARY_KEY}} \
+          --set-env-vars CLOUDINARY_SECRET=${{secrets.CLOUDINARY_SECRET}} \
+          --set-env-vars CLOUDINARY_FOLDER=${{secrets.CLOUDINARY_FOLDER}} \
+          --set-env-vars REDIS_URL=${{secrets.REDIS_URL}}
