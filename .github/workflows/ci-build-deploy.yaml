@@ -51,6 +51,6 @@ jobs:
           CLOUDINARY_NAME=${{secrets.CLOUDINARY_NAME}},\
           CLOUDINARY_KEY=${{secrets.CLOUDINARY_KEY}},\
           CLOUDINARY_SECRET=${{secrets.CLOUDINARY_SECRET}},\
-          CLOUDINARY_FOLDER=${{secrets.CLOUDINARY_FOLDER}},
-          REDIS_URL=${{secrets.REDIS_URL}},
+          CLOUDINARY_FOLDER=${{secrets.CLOUDINARY_FOLDER}},\
+          REDIS_URL=${{secrets.REDIS_URL}},\
           --quiet
