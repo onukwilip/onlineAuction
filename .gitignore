@@ -32,3 +32,6 @@ yarn-error.log*
 .vercel
 
 goserver.config.json
+
+/public/sw.*
+/public/workbox-*

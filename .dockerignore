@@ -4,3 +4,5 @@ Dockerfile
 goserver.*
 microservices-architechture.*
 .env*
+/public/sw.*
+/public/workbox-*
