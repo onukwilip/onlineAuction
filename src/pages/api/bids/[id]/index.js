@@ -3,6 +3,7 @@ import Bid from "@/models/Bid";
 import Biddings from "@/models/Biddings";
 import {
   authMiddleware,
+  getKey,
   getUploadedImagesUrl,
   mapFunction,
   storage,

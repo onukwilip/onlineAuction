@@ -113,8 +113,10 @@ const ImageComponent = ({ product, image, getProduct }) => {
 
 const ProductComponent = (props) => {
   const [image, setImage] = useState("");
+
   const router = useRouter();
-  const productId = router.query.productId;
+  // const [productId, setProductId] = useState(router.query.productId);
+  let productId = router.query.productId;
   const [postedSuccessfully, setPostedSuccessfully] = useState(false);
   const {
     value: amount,
@@ -151,9 +153,12 @@ const ProductComponent = (props) => {
       data: [
         {
           $match: {
-            ["_id"]: { $ne: product?._id },
             category: product?.category,
+            ["_id"]: { $ne: product?._id },
           },
+        },
+        {
+          $limit: 4,
         },
       ],
     },
@@ -190,7 +195,8 @@ const ProductComponent = (props) => {
       (res) => {
         setImage(res?.data?.image);
       },
-      (err) => (err?.response?.status === 404 ? router.replace("/") : null)
+      (err) =>
+        [404].includes(err?.response?.status) ? router.replace("/") : null
     );
   };
 
@@ -217,7 +223,11 @@ const ProductComponent = (props) => {
   };
 
   useEffect(() => {
-    if (!product) {
+    productId = router.query.productId;
+  }, []);
+
+  useEffect(() => {
+    if (!product && productId) {
       callGetProduct();
     }
   }, [productId]);
@@ -384,9 +394,11 @@ const ProductComponent = (props) => {
                   {(recommendedError || recommended?.length < 1) && (
                     <ResponseError>No bids available</ResponseError>
                   )}
-                  {recommended?.slice(0, 4)?.map((product, i) => (
-                    <Bid item={product} />
-                  ))}
+                  {recommended
+                    ?.filter((product) => product._id !== productId)
+                    ?.map((product, i) => (
+                      <Bid item={product} />
+                    ))}
                 </>
               )}
             </div>
