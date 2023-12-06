@@ -1,5 +1,9 @@
 name: CI/CD Pipeline to GCP Run
 on:
+  push:
+    branches:
+      - main
+      - master
   pull_request:
     branches:
       - main
