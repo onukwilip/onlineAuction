@@ -35,3 +35,4 @@ goserver.config.json
 
 /public/sw.*
 /public/workbox-*
+/public/fallback-*

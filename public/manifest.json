@@ -1,11 +1,12 @@
 {
   "theme_color": "#fed711",
   "background_color": "#ffffff",
-  "display": "browser",
+  "display": "standalone",
   "scope": "/",
   "start_url": "/",
   "name": "Online auction",
   "short_name": "OA",
+  "id": "/",
   "description": "The only app you need for selling your goods to the highest bidder.",
   "icons": [
     {
