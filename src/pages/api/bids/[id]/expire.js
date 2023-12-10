@@ -1,7 +1,7 @@
 import connect from "@/config/db";
 import Bid from "@/models/Bid";
 import User from "@/models/User";
-import { authMiddleware, sendMail } from "@/utils";
+import { authMiddleware, getKey, sendMail } from "@/utils";
 import nextConnect from "next-connect";
 import cors from "cors";
 import redisConfig from "@/config/redis-config";
