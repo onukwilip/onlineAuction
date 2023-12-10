@@ -4,8 +4,10 @@ import User from "@/models/User";
 import { authMiddleware, sendMail } from "@/utils";
 import nextConnect from "next-connect";
 import cors from "cors";
+import redisConfig from "@/config/redis-config";
 
 connect();
+const client = redisConfig();
 
 const sendMailOnExipred = async ({ userId, bid }) => {
   const html = `
@@ -3635,6 +3637,7 @@ api.put(async (req, res) => {
   // }
 
   const { query } = req;
+  const key = getKey(req, query.id);
 
   const bid = await Bid.findOne({ _id: query.id });
 
@@ -3642,7 +3645,10 @@ api.put(async (req, res) => {
     return res.status(404).json({ message: "Bid not found" });
   }
 
-  if (bid?.expired === true) return res.status(200).json(bid);
+  if (bid?.expired === true) {
+    await client.del(key).catch((e) => console.error(e.message));
+    return res.status(200).json(bid);
+  }
 
   if (new Date().getTime() < new Date(bid?.expiry)?.getTime()) {
     return res.status(400).json({ message: "Bid hasn't expired yet!" });
@@ -3658,49 +3664,9 @@ api.put(async (req, res) => {
     return res.status(400).json({ message: "Something went wrong" });
   }
 
+  await client.del(key).catch((e) => console.error(e.message));
   await sendMailOnExipred({ userId: bid?.highestBidder, bid: bid });
   return res.status(200).json(updatedBid);
 });
 
 export default api;
-
-// export default async function Bids(req, res) {
-//   connect();
-
-//   const auth = await authMiddleware({ req, res });
-//   if (auth?.code !== 200) {
-//     return res.status(401).json({ message: "Unauthorized" });
-//   }
-
-//   const { query } = req;
-
-//   if (req.method === "PUT") {
-//     const bid = await Bid.findOne({ _id: query.id });
-
-//     if (!bid) {
-//       return res.status(404).json({ message: "Bid not found" });
-//     }
-
-//     if (bid?.expired === true)
-//       return res.status(400).json({ message: "Bid has already expired" });
-
-//     if (new Date().getTime() < new Date(bid?.expiry)?.getTime()) {
-//       return res.status(400).json({ message: "Bid hasn't expired yet!" });
-//     }
-
-//     const updatedBid = await Bid.updateOne(
-//       { _id: query.id },
-//       { $set: { expired: true } },
-//       { new: true }
-//     );
-
-//     if (!updatedBid) {
-//       return res.status(400).json({ message: "Something went wrong" });
-//     }
-
-//     await sendMailOnExipred({ userId: bid?.highestBidder, bid: bid });
-//     return res.status(200).json(updatedBid);
-//   }
-
-//   return res.status(400).json({ message: "Method not allowed" });
-// }
