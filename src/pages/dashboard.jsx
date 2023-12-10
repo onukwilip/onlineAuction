@@ -1266,7 +1266,8 @@ const EditProfile = () => {
     isValid: imageIsValid,
   } = useInput((/**@type File */ image) => {
     if (!image) return true;
-    if (image.type !== "image/png" && image.type !== "image/jpg") return false;
+    if (!["image/png", "image/jpg", "image/jpeg"].includes(image.type))
+      return false;
     else return true;
   });
 

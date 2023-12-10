@@ -3629,10 +3629,10 @@ const api = nextConnect({
 api.use(cors());
 
 api.put(async (req, res) => {
-  const auth = await authMiddleware({ req, res });
-  if (auth?.code !== 200) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
+  // const auth = await authMiddleware({ req, res });
+  // if (auth?.code !== 200) {
+  //   return res.status(401).json({ message: "Unauthorized" });
+  // }
 
   const { query } = req;
 
