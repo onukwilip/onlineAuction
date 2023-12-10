@@ -7,7 +7,7 @@ import cors from "cors";
 import redisConfig from "@/config/redis-config";
 
 connect();
-const client = redisConfig();
+// const client = redisConfig();
 
 const sendMailOnExipred = async ({ userId, bid }) => {
   const html = `
@@ -3637,7 +3637,7 @@ api.put(async (req, res) => {
   // }
 
   const { query } = req;
-  const key = getKey(req, query.id);
+  // const key = getKey(req, query.id);
 
   const bid = await Bid.findOne({ _id: query.id });
 
@@ -3646,7 +3646,7 @@ api.put(async (req, res) => {
   }
 
   if (bid?.expired === true) {
-    await client.del(key).catch((e) => console.error(e.message));
+    // await client.del(key).catch((e) => console.error(e.message));
     return res.status(200).json(bid);
   }
 
@@ -3664,7 +3664,7 @@ api.put(async (req, res) => {
     return res.status(400).json({ message: "Something went wrong" });
   }
 
-  await client.del(key).catch((e) => console.error(e.message));
+  // await client.del(key).catch((e) => console.error(e.message));
   await sendMailOnExipred({ userId: bid?.highestBidder, bid: bid });
   return res.status(200).json(updatedBid);
 });

@@ -6,7 +6,7 @@ import cors from "cors";
 import redisConfig from "@/config/redis-config";
 
 connect();
-const client = redisConfig();
+// const client = redisConfig();
 
 const api = nextConnect({
   onNoMatch: (req, res) => {
@@ -18,10 +18,10 @@ api.use(cors());
 
 api.post(async (req, res) => {
   const { body } = req;
-  const key = getKey(req, JSON.stringify(body));
-  const cachedBids = await client.get(key);
+  // const key = getKey(req, JSON.stringify(body));
+  // const cachedBids = await client.get(key);
 
-  if (cachedBids) return res.status(200).json(JSON.parse(cachedBids));
+  // if (cachedBids) return res.status(200).json(JSON.parse(cachedBids));
 
   const bids = await Bid.aggregate(Array.isArray(body) ? body : null).catch(
     (e) => {
@@ -33,7 +33,7 @@ api.post(async (req, res) => {
     return res.status(404).json({ message: "No bid's available" });
   }
 
-  await client.setEx(key, 1000 * 15, JSON.stringify(bids));
+  // await client.setEx(key, 1000 * 15, JSON.stringify(bids));
   return res.status(200).json(bids);
 });
 
