@@ -59,16 +59,18 @@ const ImageComponent = ({ product, image, getProduct }) => {
   });
 
   const onExpire = () => {
-    sendExpired((res) => {
-      setExpired(true);
-      getProduct();
-    });
+    if (product.expired !== true) {
+      sendExpired((res) => {
+        setExpired(true);
+        getProduct();
+      });
+    }
   };
 
   const autoSendExpired = () => {
     if (
       new Date().getTime() >= new Date(product?.expired).getTime() &&
-      product?.expired === false &&
+      product?.expired !== true &&
       expired === false
     ) {
       onExpire();
@@ -82,8 +84,12 @@ const ImageComponent = ({ product, image, getProduct }) => {
   });
 
   useEffect(() => {
-    start();
-    autoSendExpired();
+    if (product.expired !== true) {
+      start();
+      autoSendExpired();
+    } else {
+      setExpired(true);
+    }
   }, []);
 
   return (
