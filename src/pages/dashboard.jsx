@@ -27,7 +27,7 @@ import { useForm, useInput } from "use-manage-form";
 import { authMiddleware } from "@/utils";
 
 const validateExtension = (imgName, allowedExtensions) => {
-  const ext = imgName.split(".")[0];
+  const ext = imgName.split(".").pop();
 
   if (!allowedExtensions.includes(`.${ext}`)) return false;
   return true;
