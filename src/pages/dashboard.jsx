@@ -26,6 +26,14 @@ import ResponseError from "@/components/ResponseError";
 import { useForm, useInput } from "use-manage-form";
 import { authMiddleware } from "@/utils";
 
+const validateExtension = (imgName, allowedExtensions) => {
+  const ext = imgName.split(".")[0];
+
+  if (!allowedExtensions.includes(`.${ext}`)) return false;
+  return true;
+};
+const allowedImgExtensions = [".png", ".jpg", ".jpeg", ".webp", ".avif"];
+
 class Menu {
   constructor(name, tab, icon) {
     this.name = name;
@@ -655,8 +663,7 @@ const CreateBid = () => {
     // console.log("File validation", images);
     for (const /**@type File */ image of images) {
       // console.log("Each image", image);
-      if (!["image/png", "image/jpg", "image/jpeg"].includes(image.type))
-        continue;
+      if (validateExtension(image.name, allowedImgExtensions)) continue;
       else return false;
     }
     return true;
@@ -960,8 +967,7 @@ const EditBid = () => {
     if (images.length < 1) return true;
 
     for (const /**@type File */ image of images) {
-      if (!["image/png", "image/jpg", "image/jpeg"].includes(image.type))
-        continue;
+      if (validateExtension(image.name, allowedImgExtensions)) continue;
       else return false;
     }
     return true;
@@ -1268,8 +1274,7 @@ const EditProfile = () => {
     isValid: imageIsValid,
   } = useInput((/**@type File */ image) => {
     if (!image) return true;
-    if (!["image/png", "image/jpg", "image/jpeg"].includes(image.type))
-      return false;
+    if (!validateExtension(image.name, allowedImgExtensions)) return false;
     else return true;
   });
 
