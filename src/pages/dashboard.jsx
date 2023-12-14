@@ -655,7 +655,8 @@ const CreateBid = () => {
     // console.log("File validation", images);
     for (const /**@type File */ image of images) {
       // console.log("Each image", image);
-      if (image.type === "image/png" || image.type === "image/jpg") continue;
+      if (!["image/png", "image/jpg", "image/jpeg"].includes(image.type))
+        continue;
       else return false;
     }
     return true;
@@ -959,7 +960,8 @@ const EditBid = () => {
     if (images.length < 1) return true;
 
     for (const /**@type File */ image of images) {
-      if (image.type === "image/png" || image.type === "image/jpg") continue;
+      if (!["image/png", "image/jpg", "image/jpeg"].includes(image.type))
+        continue;
       else return false;
     }
     return true;
