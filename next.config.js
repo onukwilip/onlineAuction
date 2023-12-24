@@ -7,7 +7,6 @@ const withPWA = require("next-pwa")({
     document: "/_offline",
     image: "/offline.png",
   },
-  // disable: process.env.NODE_ENV !== "production",
 });
 
 const nextConfig = withPWA({

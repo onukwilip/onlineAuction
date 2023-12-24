@@ -37,6 +37,7 @@
     "semantic-ui-react": "^2.1.4",
     "use-ajax-request": "^1.2.9",
     "use-manage-form": "^1.0.1",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "web-push": "^3.6.6"
   }
 }

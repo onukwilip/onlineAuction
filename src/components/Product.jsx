@@ -10,6 +10,7 @@ import {
   Form,
   Icon,
   Input,
+  Loader,
   Message,
 } from "semantic-ui-react";
 import Footer from "./Footer";
@@ -26,6 +27,7 @@ import ErrorMessage from "./Error";
 import LoginSignup from "./LoginSignup";
 import Modal from "./Modal";
 import { useTimer } from "react-timer-hook";
+import useRequest from "@/hooks/useRequest";
 
 const product = {
   name: "Apple MacBook Pro 13'' 2.3GHz 128GB Space Gray",
@@ -46,6 +48,8 @@ const product = {
   description:
     "Lorem ipsum dolor sit, amet consectetur adipisicing elit. Possimus doloremque tenetur nihil porro cumque nostrum illum temporibus provident, illo distinctio?",
 };
+const applicationServerKey =
+  "BCBHO6YGYiig_WJ4i-A3If6Axi20Sbn07oLCDqTL-rkqWY9sMX58LOjkPFq4nVjP9EjdNlgC9-8Gr2SVIT_UDgU";
 
 const ImageComponent = ({ product, image, getProduct }) => {
   const [expired, setExpired] = useState(product?.expired);
@@ -121,9 +125,10 @@ const ProductComponent = (props) => {
   const [image, setImage] = useState("");
 
   const router = useRouter();
-  // const [productId, setProductId] = useState(router.query.productId);
+  const [showModal, setShowModal] = useState(false);
   let productId = router.query.productId;
   const [postedSuccessfully, setPostedSuccessfully] = useState(false);
+  // const [enableNotifications, setEnableNotifications] = useState(false)
   const {
     value: amount,
     isValid: amountIsValid,
@@ -174,12 +179,18 @@ const ProductComponent = (props) => {
     sendRequest: postBid,
     error: postError,
     loading: postingBid,
-  } = useAjaxHook({
+  } = useRequest({
     instance: axios,
-    options: {
+    config: {
       url: `${process.env.API_DOMAIN}/api/bids/${productId}/bid`,
       method: "PUT",
-      data: { amount: +amount },
+      data: {
+        amount: +amount,
+      },
+    },
+    options: {
+      resetDataOnSend: true,
+      resetErrorAfterSeconds: 3,
     },
   });
 
@@ -193,6 +204,22 @@ const ProductComponent = (props) => {
     options: {
       url: `${process.env.API_DOMAIN}/api/user/${product?.userId}`,
       method: "GET",
+    },
+  });
+
+  const {
+    sendRequest: toogleProductNotifications,
+    error: toogleNotificationsError,
+    loading: tooglingNotification,
+  } = useRequest({
+    instance: axios,
+    config: {
+      url: `${process.env.API_DOMAIN}/api/bids/${productId}/toogleNotification`,
+      method: "PUT",
+    },
+    options: {
+      resetDataOnSend: true,
+      resetErrorAfterSeconds: 3,
     },
   });
 
@@ -224,8 +251,99 @@ const ProductComponent = (props) => {
     }
   };
 
-  const submitHandler = () => {
-    postBid(onSuccess, onError);
+  const submitHandler = async () => {
+    if (product.userBid?.enabledNotifications)
+      return await postBid(onSuccess, onError);
+
+    const res = confirm(
+      "Do you want to enable notifications for this product (in case you get outbid, you'll be notified)?"
+    );
+
+    if (!res) {
+      return await postBid(onSuccess, onError, {
+        amount: +amount,
+        enableNotifications: false,
+      });
+    }
+
+    const notificationResponse = await Notification.requestPermission();
+    if (notificationResponse === "granted") {
+      const sw = await navigator.serviceWorker.ready.catch((e) => {
+        console.log("An error occurred", e);
+        alert("Service worker is not ready");
+      });
+
+      if (!sw) return;
+
+      const requestPush = await sw.pushManager
+        .subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey,
+        })
+        .catch((e) => {
+          console.error(
+            `An error occurred while subscribing to push notifications: ${e.message}`
+          );
+          alert("Could not subscribe to push notifications");
+        });
+
+      if (!requestPush) return;
+
+      let parsedPushSubscription = JSON.parse(
+        JSON.stringify(requestPush) || {}
+      );
+
+      await postBid(onSuccess, onError, {
+        amount: +amount,
+        enableNotifications: true,
+        newSubscription: { ...parsedPushSubscription },
+      });
+    }
+  };
+
+  const toogleNofitifcation = async () => {
+    const res = confirm(
+      product?.userBid?.enabledNotifications
+        ? "Do you want to disable notifications for this product?"
+        : "Do you want to enable notifications for this product (if you get outbid)"
+    );
+    if (!res) return;
+
+    const notificationResponse = await Notification.requestPermission();
+    if (notificationResponse === "granted") {
+      const sw = await navigator.serviceWorker.ready.catch((e) => {
+        console.log("An error occurred", e);
+        alert("Service worker is not ready");
+      });
+
+      if (!sw) return;
+
+      const requestPush = await sw.pushManager
+        .subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: applicationServerKey,
+        })
+        .catch((e) => {
+          console.error(
+            `An error occurred while subscribing to push notifications: ${e.message}`
+          );
+          alert("Could not subscribe to push notifications");
+        });
+
+      if (!requestPush) return;
+
+      let parsedPushSubscription = JSON.parse(JSON.stringify(requestPush));
+
+      await toogleProductNotifications(
+        () => {
+          callGetProduct();
+        },
+        undefined,
+        {
+          ...parsedPushSubscription,
+        }
+      );
+    }
   };
 
   useEffect(() => {
@@ -258,6 +376,18 @@ const ProductComponent = (props) => {
 
   return (
     <>
+      {showModal && (
+        <Modal show={setShowModal}>
+          <div className={css.notification_modal}>
+            <div className={css.message}>
+              Do you want to get notified when you get outbid from this product?
+            </div>
+            <div className={css.actions}>
+              <Button>Skip</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
       {showLogin && (
         <Modal show={setShowLogin}>
           <LoginSignup toogle="login" />
@@ -319,6 +449,15 @@ const ProductComponent = (props) => {
                         {product?.startingBid}
                       </b>
                     </p>
+                    {product?.userBid?.previousBid && (
+                      <p>
+                        Previous bid:{" "}
+                        <b>
+                          <sup>$</sup>
+                          {product.userBid.previousBid}
+                        </b>
+                      </p>
+                    )}
                     <p>
                       Highest bid:{" "}
                       <b className={css["current-bid"]}>
@@ -340,13 +479,54 @@ const ProductComponent = (props) => {
                           }}
                         />
                         <div className={css.action}>
+                          <div
+                            className={`${css.bid_notification_container}`}
+                            style={
+                              product.userBid?.enabledNotifications
+                                ? { background: "black" }
+                                : { background: "rgba(255, 215, 0, 1)" }
+                            }
+                            onClick={toogleNofitifcation}
+                          >
+                            {!tooglingNotification ? (
+                              <i
+                                className={`${
+                                  product.userBid?.enabledNotifications
+                                    ? "fas fa-bell"
+                                    : "fa-regular fa-bell-slash"
+                                } ${css.bid_notification}`}
+                                style={
+                                  product.userBid?.enabledNotifications
+                                    ? { color: "rgba(255, 215, 0, 1)" }
+                                    : { color: "black" }
+                                }
+                              ></i>
+                            ) : (
+                              <>
+                                <i
+                                  className="fa-solid fa-spinner fa-pulse"
+                                  style={
+                                    product.userBid?.enabledNotifications
+                                      ? { color: "rgba(255, 215, 0, 1)" }
+                                      : { color: "black" }
+                                  }
+                                ></i>
+                              </>
+                            )}
+                          </div>
                           <Button disabled={postingBid}>
                             {postingBid ? "Loading..." : "Send bid"}
                           </Button>
                         </div>
                         {postError && postError?.response?.status !== 401 && (
-                          <ErrorMessage>
+                          <ErrorMessage textColor="red">
                             {postError?.response?.data?.message}
+                          </ErrorMessage>
+                        )}
+                        {toogleNotificationsError && (
+                          <ErrorMessage textColor="red">
+                            Couldn't enable/disable notifications. Please check
+                            your internet connection and try again
                           </ErrorMessage>
                         )}
                         {postedSuccessfully && (
@@ -416,4 +596,5 @@ const ProductComponent = (props) => {
     </>
   );
 };
+
 export default ProductComponent;

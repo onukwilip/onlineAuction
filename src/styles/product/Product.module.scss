@@ -54,12 +54,28 @@
         }
         .action {
           margin-top: 10px;
+          @include flex(center, start, 1rem, row);
           button {
             background-color: black;
             color: $pry-colour;
             &:hover {
               background-color: $pry-colour;
               color: black;
+            }
+          }
+          .bid_notification_container {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            transition: 300ms;
+            cursor: pointer;
+            @include flex(center, center, 0, row);
+            .bid_notification {
+              font-size: 16px;
+              color: $pry-colour;
+            }
+            &:hover {
+              transform: scale(1.1);
             }
           }
         }

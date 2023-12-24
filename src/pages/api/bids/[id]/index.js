@@ -46,8 +46,33 @@ api.get(async (req, res) => {
     return res.status(404).json({ message: "No bid available" });
   }
 
-  // await client.setEx(key, 1000 * 15, JSON.stringify(bid));
-  return res.status(200).json(bid);
+  const auth = await authMiddleware({ req, res });
+  if (auth?.code !== 200) {
+    return res.status(200).json(bid);
+  }
+
+  const parsedBid = JSON.parse(JSON.stringify(bid));
+  const userPrevBid = parsedBid?.bids?.find(
+    (bids) => bids.userId === auth?.data?.id
+  );
+  const userEnabledNotifications = parsedBid?.enabledNotifications?.find(
+    (id) => id === auth?.data?.id
+  );
+
+  if (userPrevBid) {
+    parsedBid.userBid = {
+      ...parsedBid.userBid,
+      previousBid: userPrevBid?.amount,
+    };
+  }
+  if (userEnabledNotifications) {
+    parsedBid.userBid = {
+      ...parsedBid.userBid,
+      enabledNotifications: userEnabledNotifications ? true : false,
+    };
+  }
+
+  return res.status(200).json(parsedBid);
 });
 
 api.put(async (req, res) => {

@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const userModel = mongoose.Schema({
+const Users = mongoose.Schema({
   email: {
     type: String,
     required: true,
@@ -28,4 +28,4 @@ const userModel = mongoose.Schema({
   image: String,
 });
 
-module.exports = mongoose.models.Users || mongoose.model("Users", userModel);
+module.exports = mongoose.models.Users || mongoose.model("Users", Users);

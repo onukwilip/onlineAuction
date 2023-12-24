@@ -7,6 +7,10 @@ import multer from "multer";
 import DataURIParser from "datauri/parser";
 import path from "path";
 import cloudinary from "./cloudinary";
+import SubscribedUsers from "@/models/NotificationSubscriptions";
+import Bid from "@/models/Bid";
+import Users from "@/models/User";
+import web_push from "web-push";
 
 export const generateRandom = (min, max) => {
   return Math.floor(Math.random() * (max - min) + min);
@@ -18,7 +22,7 @@ export const sendMail = async ({ from, to, subject, html, text }) => {
     port: 465,
     secure: true,
     auth: {
-      user: "gerydragos@gmail.com",
+      user: "onukwilip@gmail.com",
       pass: process.env.SMTP_APP_PASSWORD,
     },
   });
@@ -31,9 +35,11 @@ export const sendMail = async ({ from, to, subject, html, text }) => {
     html,
   };
 
-  const sent = await transporter.sendMail(mailOptions).catch((e) => {
-    console.log(e?.message);
-  });
+  console.log(`SENDING MAIL TO ${to}`);
+
+  const sent = await transporter
+    .sendMail(mailOptions)
+    .catch((e) => console.error(`ERROR SENDING MAIL TO ${to}. ${e.message}`));
 
   return sent;
 };
@@ -233,13 +239,290 @@ export const getUploadedImagesUrl = async (files) => {
   return imagesUrls;
 };
 
+export const manageSubscriptionsAndBidNotifications = async (
+  subscriptionBody,
+  parsedBid,
+  userID,
+  res,
+  { skipIfExists = false }
+) => {
+  // * MANAGE USER SUBSCRIPTIONS
+  if (
+    subscriptionBody?.endpoint &&
+    subscriptionBody?.keys?.p256dh &&
+    subscriptionBody?.keys?.auth
+  ) {
+    const subscription = {
+      endpoint: subscriptionBody.endpoint,
+      keys: {
+        p256dh: subscriptionBody.keys.p256dh,
+        auth: subscriptionBody.keys.auth,
+      },
+    };
+
+    // GET USER FROM LIST OF ALL USERS ON THE PLATFORM
+    const userDetails = await Users.findOne({ _id: userID }).catch((e) =>
+      console.error(
+        `Could not find user with id: ${userID}, due to ${e.message}`
+      )
+    );
+    const parsedUser = JSON.parse(JSON.stringify(userDetails));
+
+    // GET USER FROM LIST OF SUBSCRIBED USERS ON THE PLATFORM
+    const getSubscribedUser = await SubscribedUsers.findOne({
+      userID: userID,
+    });
+
+    // IF USER DOESN'T EXIST, CREATE HIM/HER
+    if (!getSubscribedUser) {
+      await SubscribedUsers.create({
+        userID: userID,
+        email: parsedUser?.email,
+        subscriptions: [subscription],
+      }).catch((e) =>
+        console.log(`Could not subscribe user due to ${e.message}`)
+      );
+    }
+    // IF HE/SHE EXISTS
+    else {
+      const parsedUser = JSON.parse(JSON.stringify(getSubscribedUser));
+
+      // GET HIS/HER EXISTING SUBSCRIPTIONS
+      const subscriptionExists = parsedUser?.subscriptions?.find(
+        (subsc) => subsc.endpoint === subscription.endpoint
+      );
+
+      // IF THE NEW SUBSCRIPTION DOESN'T EXIST, ADD IT
+      if (!subscriptionExists) {
+        await SubscribedUsers.updateOne(
+          {
+            userID: userID,
+          },
+          {
+            $push: {
+              subscriptions: {
+                $each: [subscription],
+              },
+            },
+          }
+        ).catch((e) =>
+          console.log(`Could not subscribe user due to ${e.message}`)
+        );
+      }
+    }
+  }
+
+  // * IF USER IS THE FIRST TO ENABLE NOTIFICATION FOR THIS PRODUCT
+  if (!parsedBid?.enabledNotifications) {
+    const updatedBid = await Bid.updateOne(
+      { _id: parsedBid._id },
+      {
+        enabledNotifications: [userID],
+      }
+    );
+
+    if (!updatedBid) {
+      return res.status(400).json({
+        message:
+          "Something went wrong. Could not enable notifications on this bid",
+      });
+    }
+
+    return;
+  }
+
+  // * IF THE PARAMETER IS FALSE, GO AHEAD AND VALIDATE FOR IF A USER HAS ALREADY ENABLED NOTIFICATIONS, ELSE SKIP
+  if (!skipIfExists) {
+    // * IF USER HAS PREVIOUSLY ENABLED NOTIFICATIONS
+    if (
+      Array.isArray(parsedBid?.enabledNotifications) &&
+      parsedBid.enabledNotifications.includes(userID)
+    ) {
+      // FILTER USER FROM THE LIST OF USERS TO BE NOTIFIED
+      const newEnabledNotifications = parsedBid?.enabledNotifications?.filter(
+        (id) => id !== userID
+      );
+
+      const updatedBid = await Bid.updateOne(
+        { _id: parsedBid._id },
+        {
+          enabledNotifications: [...newEnabledNotifications],
+        }
+      );
+
+      if (!updatedBid) {
+        return res.status(400).json({
+          message:
+            "Something went wrong. Could not enable notifications on this bid",
+        });
+      }
+
+      return;
+    }
+  }
+
+  // * IF USER HAS NOT PREVIOUSLY ENABLED NOTIFICATIONS
+  if (
+    Array.isArray(parsedBid?.enabledNotifications) &&
+    !parsedBid.enabledNotifications.includes(userID)
+  ) {
+    // PUSH THE USER'S ID TO LIST OF USER TO BE NOTIFIED
+    const updatedBid = await Bid.updateOne(
+      { _id: parsedBid._id },
+      {
+        $push: {
+          enabledNotifications: {
+            $each: [userID],
+          },
+        },
+      }
+    );
+
+    if (!updatedBid) {
+      return res.status(400).json({
+        message:
+          "Something went wrong. Could not enable notifications on this bid",
+      });
+    }
+
+    return;
+  }
+};
+
+export const notifyUsers = async (
+  parsedBid,
+  userID,
+  idsToSend,
+  highestBid,
+  notificationOptions
+) => {
+  console.log("Sending notifications");
+
+  const keys = {
+    publicKey:
+      "BCBHO6YGYiig_WJ4i-A3If6Axi20Sbn07oLCDqTL-rkqWY9sMX58LOjkPFq4nVjP9EjdNlgC9-8Gr2SVIT_UDgU",
+    privateKey: "5Jne3tSF56RCcmEHzIZKzB6M0alNCq7BId2iy6LxA4I",
+  };
+
+  web_push.setVapidDetails(
+    "https://bit.ly/3Thf9PG",
+    keys.publicKey,
+    keys.privateKey
+  );
+
+  const allSubscribersDetils = [];
+
+  if (idsToSend?.length > 0) {
+    for (const id of idsToSend) {
+      const subscriber = await SubscribedUsers.findOne({ userID: id }).catch(
+        (e) => console.log(`Could not retrieve user: ${id} due to ${e.message}`)
+      );
+      if (!subscriber) {
+        console.log(`User with ID ${id} does not exist`);
+        continue;
+      }
+      allSubscribersDetils.push(subscriber);
+    }
+  }
+
+  console.log("ALL SUBSCRIBERS", allSubscribersDetils);
+
+  const sendEmailAndNotifications = async () => {
+    for (const rawSubscriber of allSubscribersDetils) {
+      const subscriber = JSON.parse(JSON.stringify(rawSubscriber));
+      const id = subscriber.id;
+
+      if (!subscriber) continue;
+      if (userID === id) continue;
+
+      const email = subscriber.email;
+      const subscriptions = subscriber.subscriptions;
+
+      console.log(`SENDING MAIL TO USER: ${email}`);
+      const sentMail = await sendMail({
+        from: "onukwilip@gmail.com",
+        to: email,
+        subject: "You've been out-bid! Place another bid before it's too late!",
+        text: null,
+        html: outbidOTPTemplate(
+          "valued user",
+          parsedBid?.name,
+          highestBid,
+          parsedBid?.images[0],
+          parsedBid?._id
+        ),
+      }).catch((e) => console.log(`COULD NOT SEND MAIL TO USER: ${email}`));
+
+      if (!sentMail) console.log(`COULD NOT SEND MAIL TO EMAIL ${email}`);
+      else console.log(`MAIL SENT TO EMAIL ${email}`);
+
+      if (Array.isArray(subscriptions)) {
+        console.log(`${email} SUBSCRIPTION DETAILS`, subscriptions);
+        for (const channel of subscriptions) {
+          if (
+            !channel?.endpoint ||
+            !channel?.keys?.auth ||
+            !channel?.keys?.p256dh
+          ) {
+            console.log(
+              `Incomplete channel details for channel ${
+                channel.endpoint ? channel.endpoint?.slice(0, 30) : ""
+              } for user ${id}`
+            );
+            continue;
+          }
+
+          console.log(
+            `SENDING NOTIFICATIONS TO ${email}. SUBSCRIPTION DETAILS: ${channel.endpoint?.slice(
+              0,
+              30
+            )}`
+          );
+          const pushed = await web_push
+            .sendNotification(
+              {
+                endpoint: channel.endpoint,
+                keys: {
+                  p256dh: channel.keys.p256dh,
+                  auth: channel.keys.auth,
+                },
+              },
+              JSON.stringify({
+                title: notificationOptions?.title,
+                message: notificationOptions?.message,
+                destinationURL: notificationOptions?.destination,
+              })
+            )
+            .catch((e) =>
+              console.error(
+                `Error sending notification to user ${id} channel ${
+                  typeof channel?.endpoint === "string" &&
+                  channel?.endpoint?.slice(0, 30)
+                }...: ${e.message}`
+              )
+            );
+          if (pushed)
+            console.log(
+              `Sucessfully sent message to user ${id} on channel ${channel?.endpoint?.slice(
+                0,
+                30
+              )}...`
+            );
+        }
+      } else {
+        console.error(`User ${id} has no subscriptions`);
+      }
+    }
+  };
+
+  await sendEmailAndNotifications();
+};
+
 export const getKey = (req, ...args) =>
   `${req?.url}_${req?.method}_${args?.join("_")}`;
 
-export const passwordOTPTemplate = (
-  code,
-  to
-) => `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+export const passwordOTPTemplate = (code, to) => {
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html
   xmlns="http://www.w3.org/1999/xhtml"
   xmlns:o="urn:schemas-microsoft-com:office:office"
@@ -1768,3 +2051,1111 @@ export const passwordOTPTemplate = (
   </body>
 </html>
 `;
+};
+
+export const outbidOTPTemplate = (
+  name,
+  productName,
+  highestBid,
+  image,
+  productId
+) => {
+  return `<!DOCTYPE html>
+
+<html
+  lang="en"
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:v="urn:schemas-microsoft-com:vml"
+>
+  <head>
+    <title></title>
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <!--[if mso
+      ]><xml
+        ><o:OfficeDocumentSettings
+          ><o:PixelsPerInch>96</o:PixelsPerInch
+          ><o:AllowPNG /></o:OfficeDocumentSettings></xml
+    ><![endif]-->
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      a[x-apple-data-detectors] {
+        color: inherit !important;
+        text-decoration: inherit !important;
+      }
+
+      #MessageViewBody a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      p {
+        line-height: inherit;
+      }
+
+      .desktop_hide,
+      .desktop_hide table {
+        mso-hide: all;
+        display: none;
+        max-height: 0px;
+        overflow: hidden;
+      }
+
+      .image_block img + div {
+        display: none;
+      }
+
+      @media (max-width: 700px) {
+        .desktop_hide table.icons-inner {
+          display: inline-block !important;
+        }
+
+        .icons-inner {
+          text-align: center;
+        }
+
+        .icons-inner td {
+          margin: 0 auto;
+        }
+
+        .mobile_hide {
+          display: none;
+        }
+
+        .row-content {
+          width: 100% !important;
+        }
+
+        .stack .column {
+          width: 100%;
+          display: block;
+        }
+
+        .mobile_hide {
+          min-height: 0;
+          max-height: 0;
+          max-width: 0;
+          overflow: hidden;
+          font-size: 0px;
+        }
+
+        .desktop_hide,
+        .desktop_hide table {
+          display: table !important;
+          max-height: none !important;
+        }
+
+        .row-3 .column-1 .block-5.button_block td.pad {
+          padding: 10px 10px 10px 20px !important;
+        }
+
+        .row-3 .column-1 .block-5.button_block a,
+        .row-3 .column-1 .block-5.button_block div,
+        .row-3 .column-1 .block-5.button_block span {
+          line-height: 32px !important;
+        }
+
+        .row-3 .column-1 .block-2.heading_block td.pad {
+          padding: 10px 20px 20px !important;
+        }
+
+        .row-3 .column-1 .block-3.paragraph_block td.pad {
+          padding: 10px 20px !important;
+        }
+
+        .row-3 .column-1 .block-6.spacer_block {
+          height: 30px !important;
+        }
+      }
+    </style>
+  </head>
+  <body
+    style="
+      background-color: #eaeef0;
+      margin: 0;
+      padding: 0;
+      -webkit-text-size-adjust: none;
+      text-size-adjust: none;
+    "
+  >
+    <table
+      border="0"
+      cellpadding="0"
+      cellspacing="0"
+      class="nl-container"
+      role="presentation"
+      style="
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
+        background-color: #eaeef0;
+      "
+      width="100%"
+    >
+      <tbody>
+        <tr>
+          <td>
+            <table
+              align="center"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              class="row row-1"
+              role="presentation"
+              style="mso-table-lspace: 0pt; mso-table-rspace: 0pt"
+              width="100%"
+            >
+              <tbody>
+                <tr>
+                  <td>
+                    <table
+                      align="center"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      class="row-content stack"
+                      role="presentation"
+                      style="
+                        mso-table-lspace: 0pt;
+                        mso-table-rspace: 0pt;
+                        color: #000000;
+                        width: 680px;
+                        margin: 0 auto;
+                      "
+                      width="680"
+                    >
+                      <tbody>
+                        <tr>
+                          <td
+                            class="column column-1"
+                            style="
+                              font-weight: 400;
+                              text-align: left;
+                              mso-table-lspace: 0pt;
+                              mso-table-rspace: 0pt;
+                              padding-bottom: 5px;
+                              padding-top: 5px;
+                              vertical-align: top;
+                              border-top: 0px;
+                              border-right: 0px;
+                              border-bottom: 0px;
+                              border-left: 0px;
+                            "
+                            width="100%"
+                          >
+                            <div
+                              class="spacer_block block-1"
+                              style="
+                                height: 60px;
+                                line-height: 60px;
+                                font-size: 1px;
+                              "
+                            >
+                               
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <table
+              align="center"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              class="row row-2"
+              role="presentation"
+              style="mso-table-lspace: 0pt; mso-table-rspace: 0pt"
+              width="100%"
+            >
+              <tbody>
+                <tr>
+                  <td>
+                    <table
+                      align="center"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      class="row-content stack"
+                      role="presentation"
+                      style="
+                        mso-table-lspace: 0pt;
+                        mso-table-rspace: 0pt;
+                        background-color: #ffffff;
+                        border-radius: 15px 15px 0 0;
+                        color: #000000;
+                        width: 680px;
+                        margin: 0 auto;
+                      "
+                      width="680"
+                    >
+                      <tbody>
+                        <tr>
+                          <td
+                            class="column column-1"
+                            style="
+                              font-weight: 400;
+                              text-align: left;
+                              mso-table-lspace: 0pt;
+                              mso-table-rspace: 0pt;
+                              padding-bottom: 5px;
+                              padding-top: 5px;
+                              vertical-align: top;
+                              border-top: 0px;
+                              border-right: 0px;
+                              border-bottom: 0px;
+                              border-left: 0px;
+                            "
+                            width="100%"
+                          >
+                            <div
+                              class="spacer_block block-1"
+                              style="
+                                height: 30px;
+                                line-height: 30px;
+                                font-size: 1px;
+                              "
+                            >
+                               
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <table
+              align="center"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              class="row row-3"
+              role="presentation"
+              style="mso-table-lspace: 0pt; mso-table-rspace: 0pt"
+              width="100%"
+            >
+              <tbody>
+                <tr>
+                  <td>
+                    <table
+                      align="center"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      class="row-content stack"
+                      role="presentation"
+                      style="
+                        mso-table-lspace: 0pt;
+                        mso-table-rspace: 0pt;
+                        background-color: #ffffff;
+                        border-radius: 0;
+                        color: #000000;
+                        width: 680px;
+                        margin: 0 auto;
+                      "
+                      width="680"
+                    >
+                      <tbody>
+                        <tr>
+                          <td
+                            class="column column-1"
+                            style="
+                              font-weight: 400;
+                              text-align: left;
+                              mso-table-lspace: 0pt;
+                              mso-table-rspace: 0pt;
+                              padding-bottom: 5px;
+                              padding-top: 5px;
+                              vertical-align: top;
+                              border-top: 0px;
+                              border-right: 0px;
+                              border-bottom: 0px;
+                              border-left: 0px;
+                            "
+                            width="100%"
+                          >
+                            <table
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              class="icons_block block-1"
+                              role="presentation"
+                              style="
+                                mso-table-lspace: 0pt;
+                                mso-table-rspace: 0pt;
+                              "
+                              width="100%"
+                            >
+                              <tr>
+                                <td
+                                  class="pad"
+                                  style="
+                                    vertical-align: middle;
+                                    color: #000000;
+                                    font-family: inherit;
+                                    font-size: 14px;
+                                    font-weight: 400;
+                                    padding-bottom: 15px;
+                                    padding-left: 40px;
+                                    padding-right: 15px;
+                                    padding-top: 15px;
+                                    text-align: left;
+                                  "
+                                >
+                                  <table
+                                    align="left"
+                                    cellpadding="0"
+                                    cellspacing="0"
+                                    class="alignment"
+                                    role="presentation"
+                                    style="
+                                      mso-table-lspace: 0pt;
+                                      mso-table-rspace: 0pt;
+                                    "
+                                  >
+                                    <tr>
+                                      <td
+                                        style="
+                                          vertical-align: middle;
+                                          text-align: center;
+                                          padding-top: 5px;
+                                          padding-bottom: 5px;
+                                          padding-left: 5px;
+                                          padding-right: 5px;
+                                        "
+                                      >
+                                        <img
+                                          align="center"
+                                          class="icon"
+                                          height="64"
+                                          src="${process.env.DOMAIN}/icon-192x192.png"
+                                          style="
+                                            display: block;
+                                            height: auto;
+                                            margin: 0 auto;
+                                            border: 0;
+                                          "
+                                          width="64"
+                                        />
+                                      </td>
+                                    </tr>
+                                  </table>
+                                </td>
+                              </tr>
+                            </table>
+                            <table
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              class="heading_block block-2"
+                              role="presentation"
+                              style="
+                                mso-table-lspace: 0pt;
+                                mso-table-rspace: 0pt;
+                              "
+                              width="100%"
+                            >
+                              <tr>
+                                <td
+                                  class="pad"
+                                  style="
+                                    padding-bottom: 20px;
+                                    padding-left: 40px;
+                                    padding-right: 10px;
+                                    padding-top: 10px;
+                                    text-align: center;
+                                    width: 100%;
+                                  "
+                                >
+                                  <h1
+                                    style="
+                                      margin: 0;
+                                      color: #111418;
+                                      direction: ltr;
+                                      font-family: Helvetica Neue, Helvetica,
+                                        Arial, sans-serif;
+                                      font-size: 38px;
+                                      font-weight: 700;
+                                      letter-spacing: normal;
+                                      line-height: 120%;
+                                      text-align: left;
+                                      margin-top: 0;
+                                      margin-bottom: 0;
+                                      mso-line-height-alt: 45.6px;
+                                    "
+                                  >
+                                    <span class="tinyMce-placeholder"
+                                      >Hey ${name} You've been outbid!</span
+                                    >
+                                  </h1>
+                                </td>
+                              </tr>
+                            </table>
+                            <table
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              class="paragraph_block block-3"
+                              role="presentation"
+                              style="
+                                mso-table-lspace: 0pt;
+                                mso-table-rspace: 0pt;
+                                word-break: break-word;
+                              "
+                              width="100%"
+                            >
+                              <tr>
+                                <td
+                                  class="pad"
+                                  style="
+                                    padding-bottom: 10px;
+                                    padding-left: 40px;
+                                    padding-right: 10px;
+                                    padding-top: 10px;
+                                  "
+                                >
+                                  <div
+                                    style="
+                                      color: #6f7376;
+                                      direction: ltr;
+                                      font-family: Helvetica Neue, Helvetica,
+                                        Arial, sans-serif;
+                                      font-size: 18px;
+                                      font-weight: 400;
+                                      letter-spacing: 0px;
+                                      line-height: 150%;
+                                      text-align: left;
+                                      mso-line-height-alt: 27px;
+                                    "
+                                  >
+                                    <p style="margin: 0">
+                                      You signed up to be notified in the case
+                                      you got out-bid from this product, which
+                                      you have. Place a higher bid to stand a
+                                      chance of winning your product😊
+                                    </p>
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
+                            <div
+                              class="spacer_block block-4"
+                              style="
+                                height: 30px;
+                                line-height: 30px;
+                                font-size: 1px;
+                              "
+                            >
+                               
+                            </div>
+                            <table
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              class="button_block block-5"
+                              role="presentation"
+                              style="
+                                mso-table-lspace: 0pt;
+                                mso-table-rspace: 0pt;
+                              "
+                              width="100%"
+                            >
+                              <tr>
+                                <td
+                                  class="pad"
+                                  style="
+                                    padding-bottom: 10px;
+                                    padding-left: 40px;
+                                    padding-right: 10px;
+                                    padding-top: 10px;
+                                    text-align: left;
+                                  "
+                                >
+                                  <div align="left" class="alignment">
+                                    <!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://bit.ly/3Thf9PG" style="height:52px;width:210px;v-text-anchor:middle;" arcsize="8%" stroke="false" fillcolor="#ffd613">
+<w:anchorlock/>
+<v:textbox inset="0px,0px,0px,0px">
+<center style="color:#000; font-family:Arial, sans-serif; font-size:16px">
+<!
+                                    [endif]--><a
+                                      href="https://${process.env.DOMAIN}/product${productId}"
+                                      style="
+                                        text-decoration: none;
+                                        display: inline-block;
+                                        color: #000;
+                                        background-color: #ffd613;
+                                        border-radius: 4px;
+                                        width: auto;
+                                        border-top: 0px solid transparent;
+                                        font-weight: 400;
+                                        border-right: 0px solid transparent;
+                                        border-bottom: 0px solid transparent;
+                                        border-left: 0px solid transparent;
+                                        padding-top: 10px;
+                                        padding-bottom: 10px;
+                                        font-family: Helvetica Neue, Helvetica,
+                                          Arial, sans-serif;
+                                        font-size: 16px;
+                                        text-align: center;
+                                        mso-border-alt: none;
+                                        word-break: keep-all;
+                                      "
+                                      target="_blank"
+                                      ><span
+                                        style="
+                                          padding-left: 25px;
+                                          padding-right: 25px;
+                                          font-size: 16px;
+                                          display: inline-block;
+                                          letter-spacing: 1px;
+                                        "
+                                        ><span
+                                          style="
+                                            word-break: break-word;
+                                            line-height: 32px;
+                                          "
+                                          >Go to product page!</span
+                                        ></span
+                                      ></a
+                                    >><!--[if mso]></center></v:textbox></v:roundrect><![endif]-->
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
+                            <div
+                              class="spacer_block block-6"
+                              style="
+                                height: 45px;
+                                line-height: 45px;
+                                font-size: 1px;
+                              "
+                            >
+                               
+                            </div>
+                            <table
+                              border="0"
+                              cellpadding="10"
+                              cellspacing="0"
+                              class="paragraph_block block-7"
+                              role="presentation"
+                              style="
+                                mso-table-lspace: 0pt;
+                                mso-table-rspace: 0pt;
+                                word-break: break-word;
+                              "
+                              width="100%"
+                            >
+                              <tr>
+                                <td class="pad">
+                                  <div
+                                    style="
+                                      color: #101112;
+                                      direction: ltr;
+                                      font-family: Helvetica Neue, Helvetica,
+                                        Arial, sans-serif;
+                                      font-size: 16px;
+                                      font-weight: 400;
+                                      letter-spacing: 0px;
+                                      line-height: 120%;
+                                      text-align: left;
+                                      mso-line-height-alt: 19.2px;
+                                    "
+                                  >
+                                    <p style="margin: 0">
+                                      PRODUCT NAME: ${productName}<br />HIGHEST
+                                      BID: $${highestBid}
+                                    </p>
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <table
+              align="center"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              class="row row-4"
+              role="presentation"
+              style="mso-table-lspace: 0pt; mso-table-rspace: 0pt"
+              width="100%"
+            >
+              <tbody>
+                <tr>
+                  <td>
+                    <table
+                      align="center"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      class="row-content stack"
+                      role="presentation"
+                      style="
+                        mso-table-lspace: 0pt;
+                        mso-table-rspace: 0pt;
+                        border-radius: 0;
+                        color: #000000;
+                        width: 680px;
+                        margin: 0 auto;
+                      "
+                      width="680"
+                    >
+                      <tbody>
+                        <tr>
+                          <td
+                            class="column column-1"
+                            style="
+                              font-weight: 400;
+                              text-align: left;
+                              mso-table-lspace: 0pt;
+                              mso-table-rspace: 0pt;
+                              padding-bottom: 5px;
+                              vertical-align: top;
+                              border-top: 0px;
+                              border-right: 0px;
+                              border-bottom: 0px;
+                              border-left: 0px;
+                            "
+                            width="100%"
+                          >
+                            <table
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              class="image_block block-1"
+                              role="presentation"
+                              style="
+                                mso-table-lspace: 0pt;
+                                mso-table-rspace: 0pt;
+                              "
+                              width="100%"
+                            >
+                              <tr>
+                                <td class="pad" style="width: 100%">
+                                  <div
+                                    align="center"
+                                    class="alignment"
+                                    style="line-height: 10px"
+                                  >
+                                    <div style="max-width: 680px">
+                                      <img
+                                        src="${image}"
+                                        style="
+                                          display: block;
+                                          height: auto;
+                                          border: 0;
+                                          width: 100%;
+                                        "
+                                        width="680"
+                                      />
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <table
+              align="center"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              class="row row-5"
+              role="presentation"
+              style="mso-table-lspace: 0pt; mso-table-rspace: 0pt"
+              width="100%"
+            >
+              <tbody>
+                <tr>
+                  <td>
+                    <table
+                      align="center"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      class="row-content stack"
+                      role="presentation"
+                      style="
+                        mso-table-lspace: 0pt;
+                        mso-table-rspace: 0pt;
+                        border-radius: 0;
+                        color: #000000;
+                        width: 680px;
+                        margin: 0 auto;
+                      "
+                      width="680"
+                    >
+                      <tbody>
+                        <tr>
+                          <td
+                            class="column column-1"
+                            style="
+                              font-weight: 400;
+                              text-align: left;
+                              mso-table-lspace: 0pt;
+                              mso-table-rspace: 0pt;
+                              padding-bottom: 5px;
+                              padding-top: 5px;
+                              vertical-align: top;
+                              border-top: 0px;
+                              border-right: 0px;
+                              border-bottom: 0px;
+                              border-left: 0px;
+                            "
+                            width="100%"
+                          >
+                            <div
+                              class="spacer_block block-1"
+                              style="
+                                height: 70px;
+                                line-height: 70px;
+                                font-size: 1px;
+                              "
+                            >
+                               
+                            </div>
+                            <table
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              class="paragraph_block block-2"
+                              role="presentation"
+                              style="
+                                mso-table-lspace: 0pt;
+                                mso-table-rspace: 0pt;
+                                word-break: break-word;
+                              "
+                              width="100%"
+                            >
+                              <tr>
+                                <td
+                                  class="pad"
+                                  style="
+                                    padding-bottom: 5px;
+                                    padding-left: 10px;
+                                    padding-right: 10px;
+                                    padding-top: 10px;
+                                  "
+                                >
+                                  <div
+                                    style="
+                                      color: #545352;
+                                      direction: ltr;
+                                      font-family: Helvetica Neue, Helvetica,
+                                        Arial, sans-serif;
+                                      font-size: 18px;
+                                      font-weight: 400;
+                                      letter-spacing: 0px;
+                                      line-height: 150%;
+                                      text-align: center;
+                                      mso-line-height-alt: 27px;
+                                    "
+                                  >
+                                    <p style="margin: 0">
+                                      You are receiving this email because you
+                                      signed up for notifications at
+                                      OnlineAuction.
+                                    </p>
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
+                            <div
+                              class="spacer_block block-3"
+                              style="
+                                height: 15px;
+                                line-height: 15px;
+                                font-size: 1px;
+                              "
+                            >
+                               
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <table
+              align="center"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              class="row row-6"
+              role="presentation"
+              style="mso-table-lspace: 0pt; mso-table-rspace: 0pt"
+              width="100%"
+            >
+              <tbody>
+                <tr>
+                  <td>
+                    <table
+                      align="center"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      class="row-content stack"
+                      role="presentation"
+                      style="
+                        mso-table-lspace: 0pt;
+                        mso-table-rspace: 0pt;
+                        color: #000000;
+                        width: 680px;
+                        margin: 0 auto;
+                      "
+                      width="680"
+                    >
+                      <tbody>
+                        <tr>
+                          <td
+                            class="column column-1"
+                            style="
+                              font-weight: 400;
+                              text-align: left;
+                              mso-table-lspace: 0pt;
+                              mso-table-rspace: 0pt;
+                              padding-bottom: 5px;
+                              padding-top: 5px;
+                              vertical-align: top;
+                              border-top: 0px;
+                              border-right: 0px;
+                              border-bottom: 0px;
+                              border-left: 0px;
+                            "
+                            width="100%"
+                          >
+                            <div
+                              class="spacer_block block-1"
+                              style="
+                                height: 30px;
+                                line-height: 30px;
+                                font-size: 1px;
+                              "
+                            >
+                               
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <table
+              align="center"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              class="row row-7"
+              role="presentation"
+              style="
+                mso-table-lspace: 0pt;
+                mso-table-rspace: 0pt;
+                background-color: #ffffff;
+              "
+              width="100%"
+            >
+              <tbody>
+                <tr>
+                  <td>
+                    <table
+                      align="center"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      class="row-content stack"
+                      role="presentation"
+                      style="
+                        mso-table-lspace: 0pt;
+                        mso-table-rspace: 0pt;
+                        background-color: #ffffff;
+                        color: #000000;
+                        width: 680px;
+                        margin: 0 auto;
+                      "
+                      width="680"
+                    >
+                      <tbody>
+                        <tr>
+                          <td
+                            class="column column-1"
+                            style="
+                              font-weight: 400;
+                              text-align: left;
+                              mso-table-lspace: 0pt;
+                              mso-table-rspace: 0pt;
+                              padding-bottom: 5px;
+                              padding-top: 5px;
+                              vertical-align: top;
+                              border-top: 0px;
+                              border-right: 0px;
+                              border-bottom: 0px;
+                              border-left: 0px;
+                            "
+                            width="100%"
+                          >
+                            <table
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              class="icons_block block-1"
+                              role="presentation"
+                              style="
+                                mso-table-lspace: 0pt;
+                                mso-table-rspace: 0pt;
+                              "
+                              width="100%"
+                            >
+                              <tr>
+                                <td
+                                  class="pad"
+                                  style="
+                                    vertical-align: middle;
+                                    color: #1e0e4b;
+                                    font-family: 'Inter', sans-serif;
+                                    font-size: 15px;
+                                    padding-bottom: 5px;
+                                    padding-top: 5px;
+                                    text-align: center;
+                                  "
+                                >
+                                  <table
+                                    cellpadding="0"
+                                    cellspacing="0"
+                                    role="presentation"
+                                    style="
+                                      mso-table-lspace: 0pt;
+                                      mso-table-rspace: 0pt;
+                                    "
+                                    width="100%"
+                                  >
+                                    <tr>
+                                      <td
+                                        class="alignment"
+                                        style="
+                                          vertical-align: middle;
+                                          text-align: center;
+                                        "
+                                      >
+                                        <!--[if vml]><table align="center" cellpadding="0" cellspacing="0" role="presentation" style="display:inline-block;padding-left:0px;padding-right:0px;mso-table-lspace: 0pt;mso-table-rspace: 0pt;"><![endif]-->
+                                        <!--[if !vml]><!-->
+                                        <table
+                                          cellpadding="0"
+                                          cellspacing="0"
+                                          class="icons-inner"
+                                          role="presentation"
+                                          style="
+                                            mso-table-lspace: 0pt;
+                                            mso-table-rspace: 0pt;
+                                            display: inline-block;
+                                            margin-right: -4px;
+                                            padding-left: 0px;
+                                            padding-right: 0px;
+                                          "
+                                        >
+                                          <!--<![endif]-->
+                                          <tr>
+                                            <td
+                                              style="
+                                                vertical-align: middle;
+                                                text-align: center;
+                                                padding-top: 5px;
+                                                padding-bottom: 5px;
+                                                padding-left: 5px;
+                                                padding-right: 6px;
+                                              "
+                                            >
+                                              <a
+                                                href="http://designedwithbeefree.com/"
+                                                style="text-decoration: none"
+                                                target="_blank"
+                                                ><img
+                                                  align="center"
+                                                  alt="Beefree Logo"
+                                                  class="icon"
+                                                  height="32"
+                                                  src="images/Beefree-logo.png"
+                                                  style="
+                                                    display: block;
+                                                    height: auto;
+                                                    margin: 0 auto;
+                                                    border: 0;
+                                                  "
+                                                  width="34"
+                                              /></a>
+                                            </td>
+                                            <td
+                                              style="
+                                                font-family: 'Inter', sans-serif;
+                                                font-size: 15px;
+                                                font-weight: undefined;
+                                                color: #1e0e4b;
+                                                vertical-align: middle;
+                                                letter-spacing: undefined;
+                                                text-align: center;
+                                              "
+                                            >
+                                              <a
+                                                href="http://designedwithbeefree.com/"
+                                                style="
+                                                  color: #1e0e4b;
+                                                  text-decoration: none;
+                                                "
+                                                target="_blank"
+                                                >Designed with Beefree</a
+                                              >
+                                            </td>
+                                          </tr>
+                                        </table>
+                                      </td>
+                                    </tr>
+                                  </table>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <!-- End -->
+  </body>
+</html>
+`;
+};

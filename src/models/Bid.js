@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const BidModel = mongoose.Schema({
+const Bid = mongoose.Schema({
   name: { type: String, required: true },
   startingBid: { type: Number, required: true },
   currentBid: { type: Number, required: true },
@@ -26,6 +26,9 @@ const BidModel = mongoose.Schema({
       amount: Number,
     },
   ],
+  enabledNotifications: {
+    type: [{ type: String }],
+  },
 });
 
-module.exports = mongoose.models.Bid || mongoose.model("Bid", BidModel);
+module.exports = mongoose.models.Bid || mongoose.model("Bid", Bid);

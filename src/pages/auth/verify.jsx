@@ -36,15 +36,22 @@ const Verify = (props) => {
 export default Verify;
 
 export const getServerSideProps = async ({ req, res, query }) => {
+  //!REMOVE
+  // process.env.DOMAIN = "http://localhost:3000";
+
   const response = await axios
-    .get(
-      `${process.env.API_DOMAIN}/api/auth?id=${query?.id}&code=${query?.code}`
-    )
-    .catch((e) => {});
+    .get(`${process.env.DOMAIN}/api/auth?id=${query?.id}&code=${query?.code}`)
+    .catch((e) =>
+      console.error(
+        `Error verifying details, ${e.message}. URL: ${e?.config?.request?.url}`,
+        e
+      )
+    );
 
   console.log("QUERY", query);
+  console.log("RESPONSE", response);
 
-  if (response) {
+  if (response.status === 200) {
     return {
       props: {
         message: "Congratulations, your email address has been confirmed",

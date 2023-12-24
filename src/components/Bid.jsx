@@ -92,7 +92,20 @@ const Bid = ({ item }) => {
             <span className="date">
               Start bid: <em>${item?.startingBid}</em>
             </span>
+            {item?.userBid?.previousBid && (
+              <>
+                <br />
+                <span className="date">
+                  Your previous bid: <em>${item?.userBid?.previousBid}</em>
+                </span>
+              </>
+            )}
           </Card.Meta>
+          {/* <Card.Meta className={css["start-bid"]}>
+            <span className="date">
+              Your previous bid: <em>${item?.userBid?.previousBid}</em>
+            </span>
+          </Card.Meta> */}
           <Card.Header className={css["price"]}>
             <em>
               <sup>$</sup> {item?.currentBid}

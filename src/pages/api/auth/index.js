@@ -26,7 +26,7 @@ export const sendAuth = async (id, body) => {
       id
     )}&code=${toBase64(code.toString())}`;
     const mail = await sendMail({
-      from: "gerydragos@gmail.com",
+      from: "onukwilip@gmail.com",
       to: user?.email,
       subject: "onlineAuction (Confirm your email address)",
       text: null,
@@ -1658,59 +1658,29 @@ api.get(async (req, res) => {
   if (!user) {
     return res.status(404).json({ message: "User does not exist" });
   }
+
+  // ! REMOVE
+  // console.log("USER", JSON.parse(JSON.stringify(user)));
+
   if (
     +code === user?.auth?.code &&
     new Date().getTime() < new Date(user?.auth?.expiry)?.getTime()
   ) {
-    await User.updateOne(
+    const updateUser = await User.updateOne(
       { _id: id },
       { $set: { "auth.code": 0, "auth.expiry": null, authenticated: true } }
-    );
+    ).catch((e) => console.error(`COULD NOT UPDATE USER, ${e.message}`));
+
+    if (!updateUser)
+      return res.status(500).json({ message: "Could NOT update user" });
+
+    // ! REMOVE
+    // console.log("UPDATED USER", JSON.parse(JSON.stringify(updateUser)));
 
     return res.status(200).json({ message: "Email verified successfuly" });
   }
 
   return res.status(400).json({ message: "Invalid OTP" });
 });
-
-// export default async function auth(req, res) {
-//   const body = req.body;
-//   if (req.method === "POST") {
-//     const sent = await sendAuth(fromBase64(req.query?.id), body);
-//     if (sent === 200) {
-//       return res.status(200).json({ message: "Mail sent successfully" });
-//     }
-//     if (sent === 400) {
-//       return res.status(400).json({ message: "Could not send mail to client" });
-//     }
-//     if (sent === 404) {
-//       return res.status(404).json({ message: "User doesn't exist" });
-//     }
-//     return res.status(400).json({ message: "An error occured" });
-//   }
-//   if (req.method === "GET") {
-//     const { code: base64Code, id: base64Id } = req.query;
-//     const code = fromBase64(base64Code);
-//     const id = fromBase64(base64Id);
-//     const user = await User.findOne({ _id: id });
-//     if (!user) {
-//       return res.status(404).json({ message: "User does not exist" });
-//     }
-//     if (
-//       +code === user?.auth?.code &&
-//       new Date().getTime() < new Date(user?.auth?.expiry)?.getTime()
-//     ) {
-//       await User.updateOne(
-//         { _id: id },
-//         { $set: { "auth.code": 0, "auth.expiry": null, authenticated: true } }
-//       );
-//       return res.status(200).json({ message: "Email verified successfuly" });
-//     }
-//     return res.status(400).json({ message: "Invalid OTP" });
-//   }
-//   return res
-//     .status(400)
-//     .json({ message: "Only GET and POST ruests are allowed" });
-// }
 
 export default api;

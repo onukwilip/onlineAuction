@@ -1,7 +1,11 @@
 import connect from "@/config/db";
 import Bid from "@/models/Bid";
 import Biddings from "@/models/Biddings";
-import { authMiddleware } from "@/utils";
+import {
+  authMiddleware,
+  manageSubscriptionsAndBidNotifications,
+  notifyUsers,
+} from "@/utils";
 import nextConnect from "next-connect";
 import cors from "cors";
 
@@ -30,6 +34,20 @@ api.put(async (req, res) => {
 
   // IF BID DOES NOT EXIST RETURN 404
   if (!bid) return res.status(404).json({ message: "Bid not found" });
+
+  // PARSE BID AND MANAGE NOTIFICATIONS AND SUBSCRIPTION
+  const parsedBid = JSON.parse(JSON.stringify(bid));
+
+  if (body.enableNotifications)
+    await manageSubscriptionsAndBidNotifications(
+      body,
+      parsedBid,
+      auth?.data?.id,
+      res,
+      {
+        skipIfExists: true,
+      }
+    );
 
   //IF THIS BID WAS POSTED BY THIS USER RETURN 405
   if (bid?.userId === auth?.data?.id)
@@ -118,6 +136,32 @@ api.put(async (req, res) => {
       datePosted: new Date(),
       amount: currentBid.amount,
     });
+  }
+
+  // IF THERE ARE USERS
+  const surpasedBidders = parsedBid?.bids?.filter(
+    (bid) => currentBid.amount >= bid?.amount
+  );
+  const subscribedBidders = surpasedBidders
+    ?.filter((bidder) =>
+      parsedBid?.enabledNotifications?.find((id) => id === bidder.userId)
+    )
+    ?.filter((filteredUsers) => filteredUsers?.userId !== auth?.data?.id)
+    ?.map((filteredUsers) => filteredUsers?.userId);
+  if (subscribedBidders?.length > 0) {
+    console.log("SURPASSED BIDDERS", surpasedBidders);
+    console.log("SUBSCRIBED BIDDERS", subscribedBidders);
+    await notifyUsers(
+      parsedBid,
+      auth?.data?.id,
+      subscribedBidders,
+      highestBid?.amount,
+      {
+        title: `You've been outbid!`,
+        message: `You previously placed a bid for the '${bid?.name}' product, now you've been outbidded. Place another bid to stand a chance of winning the auction!`,
+        destination: `${process.env.DOMAIN}/product/${bid?._id}`,
+      }
+    );
   }
 
   //   ELSE RETURN 200
