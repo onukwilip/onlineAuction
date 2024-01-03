@@ -22,7 +22,7 @@ export const sendAuth = async (id, body) => {
   const user = await User.findOne({ _id: id });
 
   if (updatedUser) {
-    const link = `${process.env.API_DOMAIN}/auth/verify/?id=${toBase64(
+    const link = `${process.env.DOMAIN}/auth/verify/?id=${toBase64(
       id
     )}&code=${toBase64(code.toString())}`;
     const mail = await sendMail({
