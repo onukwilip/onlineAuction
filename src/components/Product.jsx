@@ -371,6 +371,8 @@ const ProductComponent = (props) => {
       const user_bid_notification = await getNotification().catch((e) => {});
 
       console.log("user bid notification", user_bid_notification);
+      console.log("product notification id", productId);
+      console.log("user notification id", user_id);
 
       return user_bid_notification ? true : false;
     });
