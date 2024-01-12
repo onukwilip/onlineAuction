@@ -496,6 +496,8 @@ const ProductComponent = (props) => {
         enableNotifications: true,
         newSubscription: { ...parsedPushSubscription },
       });
+    } else {
+      alert("Please enable notifications for this browser");
     }
   };
 
@@ -544,6 +546,8 @@ const ProductComponent = (props) => {
           ...parsedPushSubscription,
         }
       );
+    } else {
+      alert("Please enable notifications for this browser");
     }
   };
 
