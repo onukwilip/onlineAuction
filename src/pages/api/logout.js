@@ -20,6 +20,7 @@ api.post(async (req, res) => {
   await RefreshToken.remove({ id: refreshToken });
 
   deleteCookie("access-token", { req, res });
+  deleteCookie("session_id", { req, res });
   deleteCookie("refresh-token", { req, res });
 
   return res.status(200).json({ message: "User logged out successfully" });

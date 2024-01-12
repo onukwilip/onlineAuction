@@ -134,13 +134,13 @@ export const generateToken = async ({ userId, email, req, res }) => {
     req,
     res,
     httpOnly: true,
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: 60 * 5,
   });
   setCookie("refresh-token", token.refreshToken, {
     req,
     res,
     httpOnly: true,
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: 60 * 60 * 24 * 7,
   });
 
   return {
@@ -247,6 +247,7 @@ export const manageSubscriptionsAndBidNotifications = async (
   { skipIfExists = false }
 ) => {
   // * MANAGE USER SUBSCRIPTIONS
+  let newSubscription = false;
   if (
     subscriptionBody?.endpoint &&
     subscriptionBody?.keys?.p256dh &&
@@ -294,6 +295,7 @@ export const manageSubscriptionsAndBidNotifications = async (
 
       // IF THE NEW SUBSCRIPTION DOESN'T EXIST, ADD IT
       if (!subscriptionExists) {
+        newSubscription = true;
         await SubscribedUsers.updateOne(
           {
             userID: userID,
@@ -332,7 +334,7 @@ export const manageSubscriptionsAndBidNotifications = async (
   }
 
   // * IF THE PARAMETER IS FALSE, GO AHEAD AND VALIDATE FOR IF A USER HAS ALREADY ENABLED NOTIFICATIONS, ELSE SKIP
-  if (!skipIfExists) {
+  if (!skipIfExists && !newSubscription) {
     // * IF USER HAS PREVIOUSLY ENABLED NOTIFICATIONS
     if (
       Array.isArray(parsedBid?.enabledNotifications) &&

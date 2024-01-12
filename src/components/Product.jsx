@@ -28,6 +28,7 @@ import LoginSignup from "./LoginSignup";
 import Modal from "./Modal";
 import { useTimer } from "react-timer-hook";
 import useRequest from "@/hooks/useRequest";
+import { getCookies } from "cookies-next";
 
 const product = {
   name: "Apple MacBook Pro 13'' 2.3GHz 128GB Space Gray",
@@ -50,6 +51,15 @@ const product = {
 };
 const applicationServerKey =
   "BCBHO6YGYiig_WJ4i-A3If6Axi20Sbn07oLCDqTL-rkqWY9sMX58LOjkPFq4nVjP9EjdNlgC9-8Gr2SVIT_UDgU";
+const notifications_db = "notifications";
+const notification_index = "notification_index";
+
+class NoificationClass {
+  constructor(user_id, product_id) {
+    this.user_id = user_id;
+    this.product_id = product_id;
+  }
+}
 
 const ImageComponent = ({ product, image, getProduct }) => {
   const [expired, setExpired] = useState(product?.expired);
@@ -123,6 +133,7 @@ const ImageComponent = ({ product, image, getProduct }) => {
 
 const ProductComponent = (props) => {
   const [image, setImage] = useState("");
+  const [enabledNotifications, setEnabledNotifications] = useState(false);
 
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
@@ -233,7 +244,149 @@ const ProductComponent = (props) => {
     );
   };
 
-  const onSuccess = (res) => {
+  const toogleIndexedDBNotification = async () => {
+    console.log("Toogling notification");
+    await openIndexedDB(async (/** @type IDBDatabase */ db) => {
+      const user_id = window.atob(getCookies()?.session_id || "");
+
+      const transaction = db.transaction(notifications_db, "readwrite");
+      const notificationsStore = transaction.objectStore(notifications_db);
+
+      const notificationIndex = notificationsStore.index(notification_index);
+
+      // TODO: IMPLEMENT ALGO. FOR UPDATING THE USER-BID NOTIFICATION STATUS
+
+      const getNotifications = () => {
+        return new Promise((res, rej) => {
+          const notifications = notificationIndex.getAll([user_id, productId]);
+
+          notifications.addEventListener("error", (e) => {
+            console.error(
+              `An error occurred while retriving notifications list: ${e.message}`
+            );
+            rej(e);
+          });
+
+          notifications.addEventListener("success", () => {
+            res(notifications.result);
+          });
+        });
+      };
+      const deleteBidNotification = (id) => {
+        console.log("Deleting notification");
+
+        return new Promise((res, rej) => {
+          const deleted_notification = notificationsStore.delete(id);
+
+          deleted_notification.addEventListener("error", (e) => {
+            console.error(
+              `An error occurred while deleting notification with id ${id}: ${e.message}`
+            );
+            rej(e);
+          });
+
+          deleted_notification.addEventListener("success", () => {
+            res(deleted_notification.result);
+          });
+        });
+      };
+      const addNotification = () => {
+        console.log("Adding notification");
+
+        return new Promise((res, rej) => {
+          const added_notification = notificationsStore.add(
+            new NoificationClass(user_id, productId)
+          );
+
+          added_notification.addEventListener("error", (e) => {
+            console.error(
+              `An error occurred while adding notification: ${e.message}`
+            );
+            rej(e);
+          });
+
+          added_notification.addEventListener("success", () => {
+            res(added_notification.result);
+          });
+        });
+      };
+
+      const bid_notifications = await getNotifications().catch((e) => {});
+
+      // * DELETE BID NOTIFICATIONS FROM INDEXEDDB IF NOTIFICATION EXISTS
+      if (
+        bid_notifications &&
+        Array.isArray(bid_notifications) &&
+        bid_notifications?.length > 0
+      ) {
+        console.log("bid notifications", bid_notifications);
+
+        for (const bid_notification of bid_notifications) {
+          await deleteBidNotification(bid_notification._id);
+        }
+      }
+      // * CREATE NOTIFICATION IN NOTIFICATION DB IF NOT EXIST
+      else {
+        console.log("Calling add notification");
+
+        await addNotification();
+      }
+
+      transaction.addEventListener("complete", () => {
+        console.log("Transaction completed");
+        db.close();
+      });
+    });
+  };
+
+  const userBidNotificationExists = async () => {
+    return await openIndexedDB(async (/** @type IDBDatabase */ db) => {
+      const user_id = window.atob(getCookies()?.session_id || "");
+
+      const transaction = db.transaction(notifications_db, "readwrite");
+      const notificationsStore = transaction.objectStore(notifications_db);
+
+      const notification_index_index =
+        notificationsStore.index(notification_index);
+
+      const getNotification = () => {
+        return new Promise((res, rej) => {
+          const user_bid_notification = notification_index_index.get([
+            user_id,
+            productId,
+          ]);
+
+          user_bid_notification.addEventListener("error", (e) => {
+            console.error(
+              `Error retrieving user-bid notification, ${e.message}`
+            );
+            rej(e);
+          });
+          user_bid_notification.addEventListener("success", (e) => {
+            res(user_bid_notification.result);
+          });
+        });
+      };
+
+      const user_bid_notification = await getNotification().catch((e) => {});
+
+      console.log("user bid notification", user_bid_notification);
+
+      return user_bid_notification ? true : false;
+    });
+  };
+
+  const updateEnabledNotification = async () => {
+    const userEnabledNotification = await userBidNotificationExists();
+    setEnabledNotifications(userEnabledNotification);
+    console.log("USER ENABLED NOTIFICATION", userEnabledNotification);
+  };
+
+  const onSuccess = async (res) => {
+    await toogleIndexedDBNotification();
+    const userEnabledNotifications = await userBidNotificationExists();
+    await updateEnabledNotification();
+
     setPostedSuccessfully(true);
     resetAmount();
 
@@ -251,8 +404,53 @@ const ProductComponent = (props) => {
     }
   };
 
+  const openIndexedDB = (/**@type Function */ onSuccess) => {
+    return new Promise((res, rej) => {
+      /** @type IDBDatabase */
+      let db;
+      const opendDB = indexedDB.open(notifications_db, 1);
+
+      opendDB.addEventListener("error", (e) => {
+        console.error(
+          `An error occurred while opening '${notifications_db}' database`,
+          e.message
+        );
+        rej(e);
+      });
+
+      opendDB.addEventListener("upgradeneeded", (e) => {
+        db = opendDB.result;
+
+        db.addEventListener("error", (e) =>
+          console.error(
+            `An error occurred while opening '${notifications_db}' database`,
+            e.message
+          )
+        );
+
+        const notificationsStore = db.createObjectStore(notifications_db, {
+          keyPath: "_id",
+          autoIncrement: true,
+        });
+        notificationsStore.createIndex(
+          notification_index,
+          ["user_id", "product_id"],
+          { unique: false }
+        );
+      });
+
+      opendDB.addEventListener("success", async (e) => {
+        if (!db) db = opendDB.result;
+
+        const returnVal = await onSuccess(db);
+        res(returnVal);
+      });
+    });
+  };
+
   const submitHandler = async () => {
-    if (product.userBid?.enabledNotifications)
+    // if (product.userBid?.enabledNotifications)
+    if (await userBidNotificationExists())
       return await postBid(onSuccess, onError);
 
     const res = confirm(
@@ -303,7 +501,8 @@ const ProductComponent = (props) => {
 
   const toogleNofitifcation = async () => {
     const res = confirm(
-      product?.userBid?.enabledNotifications
+      // product?.userBid?.enabledNotifications
+      (await userBidNotificationExists())
         ? "Do you want to disable notifications for this product?"
         : "Do you want to enable notifications for this product (if you get outbid)"
     );
@@ -335,7 +534,9 @@ const ProductComponent = (props) => {
       let parsedPushSubscription = JSON.parse(JSON.stringify(requestPush));
 
       await toogleProductNotifications(
-        () => {
+        async () => {
+          await toogleIndexedDBNotification();
+          await updateEnabledNotification();
           callGetProduct();
         },
         undefined,
@@ -348,6 +549,7 @@ const ProductComponent = (props) => {
 
   useEffect(() => {
     productId = router.query.productId;
+    updateEnabledNotification();
   }, []);
 
   useEffect(() => {
@@ -482,7 +684,7 @@ const ProductComponent = (props) => {
                           <div
                             className={`${css.bid_notification_container}`}
                             style={
-                              product.userBid?.enabledNotifications
+                              enabledNotifications
                                 ? { background: "black" }
                                 : { background: "rgba(255, 215, 0, 1)" }
                             }
@@ -491,12 +693,12 @@ const ProductComponent = (props) => {
                             {!tooglingNotification ? (
                               <i
                                 className={`${
-                                  product.userBid?.enabledNotifications
+                                  enabledNotifications
                                     ? "fas fa-bell"
                                     : "fa-regular fa-bell-slash"
                                 } ${css.bid_notification}`}
                                 style={
-                                  product.userBid?.enabledNotifications
+                                  enabledNotifications
                                     ? { color: "rgba(255, 215, 0, 1)" }
                                     : { color: "black" }
                                 }
@@ -506,7 +708,7 @@ const ProductComponent = (props) => {
                                 <i
                                   className="fa-solid fa-spinner fa-pulse"
                                   style={
-                                    product.userBid?.enabledNotifications
+                                    enabledNotifications
                                       ? { color: "rgba(255, 215, 0, 1)" }
                                       : { color: "black" }
                                   }

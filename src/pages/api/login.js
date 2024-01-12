@@ -1,9 +1,10 @@
 import connect from "@/config/db";
 import User from "@/models/User";
-import { generateJWT, generateToken } from "@/utils";
+import { generateJWT, generateToken, toBase64 } from "@/utils";
 import bcrypt from "bcrypt";
 import nextConnect from "next-connect";
 import cors from "cors";
+import { setCookie } from "cookies-next";
 
 connect();
 
@@ -28,6 +29,12 @@ api.post(async (req, res) => {
         email: user?.email,
         req,
         res,
+      });
+
+      setCookie("session_id", toBase64(user?._id), {
+        req,
+        res,
+        maxAge: 60 * 60 * 24 * 7,
       });
 
       return res.status(200).json({
