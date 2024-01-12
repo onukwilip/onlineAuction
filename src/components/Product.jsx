@@ -131,13 +131,13 @@ const ImageComponent = ({ product, image, getProduct }) => {
   );
 };
 
-const ProductComponent = (props) => {
+const ProductComponent = ({ productId }) => {
   const [image, setImage] = useState("");
   const [enabledNotifications, setEnabledNotifications] = useState(false);
 
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
-  let productId = router.query.productId;
+  // let productId = router.query.productId;
   const [postedSuccessfully, setPostedSuccessfully] = useState(false);
   // const [enableNotifications, setEnableNotifications] = useState(false)
   const {
@@ -554,7 +554,8 @@ const ProductComponent = (props) => {
   };
 
   useEffect(() => {
-    productId = router.query.productId;
+    // productId = router.query.productId;
+    console.log("Props product id", productId);
     updateEnabledNotification();
   }, []);
 

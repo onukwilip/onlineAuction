@@ -6,9 +6,17 @@ const Product = (props) => {
   return (
     <>
       <HeadComponent></HeadComponent>
-      <ProductComponent />
+      <ProductComponent productId={props.productId} />
     </>
   );
 };
 
 export default Product;
+
+export const getServerSideProps = async ({ params }) => {
+  return {
+    props: {
+      productId: params.productId,
+    },
+  };
+};
