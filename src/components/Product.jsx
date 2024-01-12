@@ -385,10 +385,6 @@ const ProductComponent = ({ productId }) => {
   };
 
   const onSuccess = async (res) => {
-    await toogleIndexedDBNotification();
-    const userEnabledNotifications = await userBidNotificationExists();
-    await updateEnabledNotification();
-
     setPostedSuccessfully(true);
     resetAmount();
 
@@ -493,11 +489,20 @@ const ProductComponent = ({ productId }) => {
         JSON.stringify(requestPush) || {}
       );
 
-      await postBid(onSuccess, onError, {
-        amount: +amount,
-        enableNotifications: true,
-        newSubscription: { ...parsedPushSubscription },
-      });
+      await postBid(
+        async (res) => {
+          await toogleIndexedDBNotification();
+          const userEnabledNotifications = await userBidNotificationExists();
+          await updateEnabledNotification();
+          await onSuccess(res);
+        },
+        onError,
+        {
+          amount: +amount,
+          enableNotifications: true,
+          newSubscription: { ...parsedPushSubscription },
+        }
+      );
     } else {
       alert("Please enable notifications for this browser");
     }
