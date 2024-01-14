@@ -134,7 +134,7 @@ export const generateToken = async ({ userId, email, req, res }) => {
     req,
     res,
     httpOnly: true,
-    maxAge: 60 * 5,
+    maxAge: 60 * 60 * 24 * 7,
   });
   setCookie("refresh-token", token.refreshToken, {
     req,
